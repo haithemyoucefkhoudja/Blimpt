@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 195 74% 95%;
+    --foreground: 195 5% 0%;
+    --card: 195 50% 90%;
+    --card-foreground: 195 5% 10%;
+    --popover: 195 74% 95%;
+    --popover-foreground: 195 95% 0%;
+    --primary: 195 100% 11.2%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 195 30% 70%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 157 30% 85%;
+    --muted-foreground: 195 5% 35%;
+    --accent: 157 30% 80%;
+    --accent-foreground: 195 5% 10%;
+    --destructive: 0 74% 30%;
+    --destructive-foreground: 195 5% 90%;
+    --border: 195 30% 50%;
+    --input: 195 30% 18%;
+    --ring: 195 100% 11.2%;
+    --radius: 0.5rem;
+   }
+  .dark {
+    --background: 150 10% 5%;
+    --foreground: 152.4 5% 90%;
+    --card: 152.4 48% 0%;
+    --card-foreground: 152.4 5% 90%;
+    --popover: 152.4 48% 5%;
+    --popover-foreground: 152.4 5% 90%;
+    --primary: 152.4 76% 80.4%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 152.4 30% 10%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 114.4 30% 15%;
+    --muted-foreground: 152.4 5% 60%;
+    --accent: 114.4 30% 15%;
+    --accent-foreground: 152.4 5% 90%;
+    --destructive: 0 50% 30%;
+    --destructive-foreground: 152.4 5% 90%;
+    --border: 152.4 30% 18%;
+    --input: 152.4 30% 18%;
+    --ring: 152.4 76% 80.4%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+.ov-hidden {
+  overflow-y: hidden;
+}
+.grabbable {
+  cursor: move; /* fallback if grab cursor is unsupported */
+  cursor: grab;
+  cursor: -moz-grab;
+  cursor: -webkit-grab;
+}
+/* Add these scrollbar styles */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thumb-neutral-600::-webkit-scrollbar-thumb {
+  background-color: hsl(240 4% 46%);
+  border-radius: 4px;
+}
+
+.scrollbar-thumb-neutral-600:hover::-webkit-scrollbar-thumb {
+  background-color: hsl(240 5% 64%);
+}
+
+.scrollbar-track-transparent::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
