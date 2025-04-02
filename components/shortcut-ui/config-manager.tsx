@@ -20,6 +20,7 @@ import ModelsList from "./models-list";
 import ProvidersList from "./providers-list";
 import { useConfig } from "@/providers/config-provider";
 import { useAppResize } from "./hooks/use-app-resize";
+import UpdaterSection from "./updater-section";
 
 
 const WINDOW = "settings"
@@ -99,6 +100,8 @@ const ConfigManager: React.FC = () => {
             <Button disabled={!isUpdated} onClick={saveConfigInner}>Save Configuration</Button>
           </CardFooter>
         </Card>
+        {/* Added Updater Section */}
+        <UpdaterSection />
       </ScrollArea>
     </div>
   );

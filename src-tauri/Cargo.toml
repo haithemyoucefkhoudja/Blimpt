@@ -17,6 +17,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "2.0.0"
+tauri-plugin-updater = "2"
 
 [target."cfg(target_os = \"macos\")".dependencies]
 cocoa = "0.26"
@@ -41,4 +42,5 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-store = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-process = "2.0.0"
 

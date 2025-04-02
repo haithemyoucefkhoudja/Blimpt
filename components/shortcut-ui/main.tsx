@@ -17,6 +17,10 @@ import { ConversationList } from "./history";
 import { useChat } from "@/providers/chat-provider";
 import LoveIndicator from "./LoveIndicator";
 import NewChatIndicator from "./new-chat-indicator";
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
+
+
 interface MainInputProps {
   input: string;
   isLoading: boolean;
@@ -60,8 +64,40 @@ function MainComponent({
     if (ActiveWindow !== 'chat') {
       closeWindow();
     }
-  },[ActiveWindow]);
+  }, [ActiveWindow]);
+  useEffect(() => {
+    const updateChecker = async () => {
+      const update = await check();
+      console.log(update)
+    }
+    updateChecker();
+  // if (update) {
+  // console.log(
+  //   `found update ${update.version} from ${update.date} with notes ${update.body}`
+  // );
+  // let downloaded = 0;
+  // let contentLength = 0;
+  // // alternatively we could also call update.download() and update.install() separately
+  // await update.downloadAndInstall((event) => {
+  //   switch (event.event) {
+  //     case 'Started':
+  //       contentLength = event.data.contentLength;
+  //       console.log(`started downloading ${event.data.contentLength} bytes`);
+  //       break;
+  //     case 'Progress':
+  //       downloaded += event.data.chunkLength;
+  //       console.log(`downloaded ${downloaded} from ${contentLength}`);
+  //       break;
+  //     case 'Finished':
+  //       console.log('download finished');
+  //       break;
+  //   }
+  // });
 
+  // console.log('update installed');
+  // await relaunch();
+// }
+  },[])
   // New switch to determine the main content component
   let contentComponent;
   switch (ActiveWindow) {

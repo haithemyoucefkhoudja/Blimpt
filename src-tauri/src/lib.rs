@@ -16,10 +16,11 @@ fn start_setup(window: tauri::Window) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
-            
             let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
                 .title("Quick Tool")
                 .decorations(false)
@@ -94,8 +95,8 @@ pub fn run() {
                     "registered for autostart? {}",
                     autostart_manager.is_enabled().unwrap()
                 );
-                // Disable autostart
-                let _ = autostart_manager.disable();
+                // // Disable autostart
+                // let _ = autostart_manager.disable();
             }
 
             #[cfg(desktop)]

@@ -6,8 +6,8 @@ use std::os::windows::process::CommandExt;
 use std::process::Command;
 use std::time::Duration;
 use std::{env, thread};
-use tauri::{Emitter, Manager};
 use tauri::Window;
+use tauri::{Emitter, Manager};
 
 const DETACHED_PROCESS: u32 = 0x00000008;
 const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
@@ -107,7 +107,6 @@ fn get_searxng_port() -> String {
     String::new()
 }
 fn run_searxng(window: &Window) -> Result<(), Box<dyn std::error::Error>> {
-    
     if let Some(docker_path) = find_docker_path() {
         window
             .emit("searxng-run", "Starting Docker Desktop...")
@@ -177,7 +176,7 @@ fn run_searxng(window: &Window) -> Result<(), Box<dyn std::error::Error>> {
     let binding = window.path().resource_dir().unwrap();
     let mut path = binding.to_str().unwrap().to_string(); // Convert to mutable String
     path = clean_path(&path).to_string(); // Now you can reassign
-    println!("{}", path);  // This will show the "normal" path
+    println!("{}", path); // This will show the "normal" path
     let candidate_ports = [8080, 8081, 8082, 8083, 8084, 8085];
     let mut success = false;
     for port in candidate_ports.iter() {
