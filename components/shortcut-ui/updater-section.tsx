@@ -161,7 +161,7 @@ const UpdaterSection = () => {
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between">
+      <CardFooter className="flex flex-col space-y-2 items-start">
         <Button 
           variant="outline" 
           onClick={checkForUpdates} 
@@ -173,6 +173,8 @@ const UpdaterSection = () => {
         
         {updateAvailable && !downloadComplete && (
           <Button 
+
+            className=""
             onClick={downloadAndInstallUpdate} 
             disabled={downloading}
           >

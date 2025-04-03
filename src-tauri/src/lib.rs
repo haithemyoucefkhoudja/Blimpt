@@ -21,6 +21,11 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
+            #[cfg(debug_assertions)]
+            const IS_DEV: bool = true;
+
+            #[cfg(not(debug_assertions))]
+            const IS_DEV: bool = false;
             let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
                 .title("Quick Tool")
                 .decorations(false)
@@ -95,6 +100,13 @@ pub fn run() {
                     "registered for autostart? {}",
                     autostart_manager.is_enabled().unwrap()
                 );
+                if IS_DEV {
+                    let _ = autostart_manager.disable();
+                    println!(
+                        "registered for autostart? {}",
+                        autostart_manager.is_enabled().unwrap()
+                    );
+                }
                 // // Disable autostart
                 // let _ = autostart_manager.disable();
             }
