@@ -122,7 +122,7 @@ function MainComponent({
       contentComponent = <CommandControl />;
       break;
     case "list":
-      contentComponent = <MessageList errorMessage={errorMessage} isLoading={isLoading} rewrite={rewrite} messages={messages} />;
+      contentComponent = <MessageList errorMessage={errorMessage} isLoading={isLoading} rewrite={rewrite} messages={messages} conversationId={conversation.id} />;
       break;
     case "settings":
       contentComponent = <ConfigManager />;

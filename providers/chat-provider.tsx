@@ -646,9 +646,6 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const removeClipboardItem = useCallback((index: number) => {
     
     setClipboardItems((prev) => { 
-      if(index == 0) {
-        navigator.clipboard.writeText("");
-      }
       const newItems = [...prev]
       newItems.splice(index, 1)
       return newItems
@@ -656,8 +653,6 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, [])
 
   const clearAllClipboardItems = useCallback(() => {
-    
-    navigator.clipboard.writeText("");
     setClipboardItems([])
   }, [])
 

@@ -95,16 +95,13 @@ export async function storeMessage(message: Message, conversationTitle: string):
     conversation_id: conversationId as number,
   }
 }
-
-/**
- * Get all messages for a conversation
- */
-export async function getMessages(conversationId: number): Promise<Message[]> {
+export async function getAllMessages(conversationId: number): Promise<Message[]> {
   const db = await initDatabase()
 
-  const result = await db.select<any>("SELECT id, message, timestamp FROM messages WHERE conversation_id = $1", [
-    conversationId,
-  ])
+  const result = await db.select<any>(
+    "SELECT id, message, timestamp FROM messages WHERE conversation_id = $1 ORDER BY timestamp DESC",
+    [conversationId]
+  )
 
   return result.map((row) => {
     const message = JSON.parse(row.message)
@@ -114,12 +111,34 @@ export async function getMessages(conversationId: number): Promise<Message[]> {
 }
 
 /**
- * Get all conversations
+ * Get messages for a conversation with pagination
  */
-export async function getConversations(): Promise<Conversation[]> {
+export async function getMessages(conversationId: number, page = 0, pageSize = 5): Promise<Message[]> {
   const db = await initDatabase()
 
-  const result = await db.select<any>("SELECT id, title, timestamp FROM conversations")
+  const result = await db.select<any>(
+    "SELECT id, message, timestamp FROM messages WHERE conversation_id = $1 ORDER BY timestamp DESC LIMIT $2 OFFSET $3",
+    [conversationId, pageSize, page * pageSize],
+  )
+
+  return result.map((row) => {
+    const message = JSON.parse(row.message)
+    message.id = row.id.toString() // Add ID for frontend use
+    return message
+  })
+}
+
+/**
+ * Get all conversations with pagination
+ */
+export async function getConversations(page = 0, pageSize = 10): Promise<Conversation[]> {
+  const db = await initDatabase()
+
+  const result = await db.select<any>(
+    "SELECT id, title, timestamp FROM conversations ORDER BY timestamp DESC LIMIT $1 OFFSET $2",
+    [pageSize, page * pageSize],
+  )
+
   return result.map((row) => ({
     id: row.id,
     title: row.title,
@@ -127,6 +146,27 @@ export async function getConversations(): Promise<Conversation[]> {
   }))
 }
 
+
+/**
+ * Count total conversations (for pagination)
+ */
+export async function countConversations(): Promise<number> {
+  const db = await initDatabase()
+  const result = await db.select<{ count: number }>("SELECT COUNT(*) as count FROM conversations")
+  return result[0].count
+}
+
+/**
+ * Count total messages in a conversation (for pagination)
+ */
+export async function countMessages(conversationId: number): Promise<number> {
+  const db = await initDatabase()
+  const result = await db.select<{ count: number }>(
+    "SELECT COUNT(*) as count FROM messages WHERE conversation_id = $1",
+    [conversationId],
+  )
+  return result[0].count
+}
 /**
  * Edit a message
  */

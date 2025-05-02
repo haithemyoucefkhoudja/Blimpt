@@ -3,7 +3,7 @@ import { Model } from "@/types/settings/model";
 
 const CLOSE_DELAY = 15000;
 const WIDTH_OFFSET = 200;
-const MAX_HEIGHT = 800;
+const MAX_HEIGHT = 900;
 const MAX_WIDTH = 600;
 const CHECKSEARXNG_TIMOUT = 30000;
 const defaultModels: Model[] = [

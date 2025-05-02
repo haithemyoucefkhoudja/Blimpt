@@ -1,20 +1,20 @@
 import {
   ChatGoogleGenerativeAI,
   GoogleGenerativeAIEmbeddings,
-} from '@langchain/google-genai';
-import { getGeminiApiKey } from '../../config';
-// import logger from '../../utils/logger';
+} from "@langchain/google-genai";
+import { getGeminiApiKey } from "../../config";
 
-export const loadGeminiChatModels = async (geminiApiKey: string, model: string) => {
-  
+export const loadGeminiChatModels = async (
+  geminiApiKey: string,
+  model: string
+) => {
   try {
-    
     if (!geminiApiKey) return {};
     return new ChatGoogleGenerativeAI({
       modelName: model,
       temperature: 0.7,
       apiKey: geminiApiKey,
-    })
+    });
   } catch (err) {
     console.error(`Error loading Gemini models: ${err}`);
     return {};
@@ -28,11 +28,11 @@ export const loadGeminiEmbeddingsModels = async () => {
 
   try {
     const embeddingModels = {
-      'text-embedding-004': {
-        displayName: 'Text Embedding',
+      "text-embedding-004": {
+        displayName: "Text Embedding",
         model: new GoogleGenerativeAIEmbeddings({
           apiKey: geminiApiKey,
-          modelName: 'text-embedding-004',
+          modelName: "text-embedding-004",
         }),
       },
     };

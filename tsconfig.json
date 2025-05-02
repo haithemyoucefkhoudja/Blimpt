@@ -22,6 +22,6 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*", "providers/*.tsx", "search/*.ts", "types/*.ts", "utils/*.ts", "prompts/*.ts", "components/**/*", "lib/**/*", "actions/*.ts", "db/*.ts", "perplexica/*.ts"],
+  "include": ["src/**/*", "providers/*.tsx", "search/*.ts", "types/*.ts", "hooks/*.ts", "utils/*.ts", "prompts/*.ts", "components/**/*", "lib/**/*", "actions/*.ts", "db/*.ts", "perplexica/*.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

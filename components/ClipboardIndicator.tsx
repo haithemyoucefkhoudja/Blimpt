@@ -89,6 +89,7 @@ export function ClipboardIndicator({
             size="sm"
             className="h-6 px-2 py-0 rounded-md text-xs flex items-center gap-1"
             onClick={handlePaste}
+            type='button'
             title="Paste from clipboard"
             disabled={clipboardItems.length >= MAX_CLIPBOARD_ITEMS}
           >

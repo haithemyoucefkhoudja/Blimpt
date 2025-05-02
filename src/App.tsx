@@ -5,17 +5,20 @@ import MessangerContainer from "@/components/shortcut-ui/messanger-container";
 import { ConfigProvider } from "@/providers/config-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import ChatProvider from "@/providers/chat-provider";
+import { QueryProvider } from "@/providers/query-provider";
 export default function App() {
   
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <ConfigProvider>
-        <AppContainer>
-            <ChatProvider>
-              <MessangerContainer />
-            </ChatProvider>
-          </AppContainer>
-      </ConfigProvider>
+      <QueryProvider>
+          <ConfigProvider>
+            <AppContainer>
+              <ChatProvider>
+                <MessangerContainer />
+              </ChatProvider>
+            </AppContainer>
+          </ConfigProvider>
+      </QueryProvider>
     </ThemeProvider>
   );
 }

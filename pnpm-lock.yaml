@@ -68,6 +68,15 @@ dependencies:
   '@radix-ui/react-tooltip':
     specifier: ^1.1.6
     version: 1.1.6(@types/react-dom@18.3.5)(@types/react@18.3.18)(react-dom@18.3.1)(react@18.3.1)
+  '@tanstack/react-query':
+    specifier: ^5.72.2
+    version: 5.72.2(react@18.3.1)
+  '@tanstack/react-query-devtools':
+    specifier: ^5.72.2
+    version: 5.72.2(@tanstack/react-query@5.72.2)(react@18.3.1)
+  '@tanstack/react-virtual':
+    specifier: ^3.13.6
+    version: 3.13.6(react-dom@18.3.1)(react@18.3.1)
   '@tauri-apps/api':
     specifier: ^2
     version: 2.2.0
@@ -164,6 +173,9 @@ dependencies:
   react-syntax-highlighter:
     specifier: ^15.6.1
     version: 15.6.1(react@18.3.1)
+  react-virtuoso:
+    specifier: ^4.12.6
+    version: 4.12.6(react-dom@18.3.1)(react@18.3.1)
   rehype-raw:
     specifier: ^7.0.0
     version: 7.0.0
@@ -2919,6 +2931,49 @@ packages:
     dependencies:
       domhandler: 5.0.3
       selderee: 0.11.0
+    dev: false
+
+  /@tanstack/query-core@5.72.2:
+    resolution: {integrity: sha512-fxl9/0yk3mD/FwTmVEf1/H6N5B975H0luT+icKyX566w6uJG0x6o+Yl+I38wJRCaogiMkstByt+seXfDbWDAcA==}
+    dev: false
+
+  /@tanstack/query-devtools@5.72.2:
+    resolution: {integrity: sha512-mMKnGb+iOhVBcj6jaerCFRpg8pACStdG8hmUBHPtToeZzs4ctjBUL1FajqpVn2WaMxnq8Wya+P3Q5tPFNM9jQw==}
+    dev: false
+
+  /@tanstack/react-query-devtools@5.72.2(@tanstack/react-query@5.72.2)(react@18.3.1):
+    resolution: {integrity: sha512-n53qr9JdHCJTCUba6OvMhwiV2CcsckngOswKEE7nM5pQBa/fW9c43qw8omw1RPT2s+aC7MuwS8fHsWT8g+j6IQ==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.72.2
+      react: ^18 || ^19
+    dependencies:
+      '@tanstack/query-devtools': 5.72.2
+      '@tanstack/react-query': 5.72.2(react@18.3.1)
+      react: 18.3.1
+    dev: false
+
+  /@tanstack/react-query@5.72.2(react@18.3.1):
+    resolution: {integrity: sha512-SVNHzyBUYiis+XiCl+8yiPZmMYei2AKYY94wM/zpvB5l1jxqOo82FQTziSJ4pBi96jtYqvYrTMxWynmbQh3XKw==}
+    peerDependencies:
+      react: ^18 || ^19
+    dependencies:
+      '@tanstack/query-core': 5.72.2
+      react: 18.3.1
+    dev: false
+
+  /@tanstack/react-virtual@3.13.6(react-dom@18.3.1)(react@18.3.1):
+    resolution: {integrity: sha512-WT7nWs8ximoQ0CDx/ngoFP7HbQF9Q2wQe4nh2NB+u2486eX3nZRE40P9g6ccCVq7ZfTSH5gFOuCoVH5DLNS/aA==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    dependencies:
+      '@tanstack/virtual-core': 3.13.6
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+    dev: false
+
+  /@tanstack/virtual-core@3.13.6:
+    resolution: {integrity: sha512-cnQUeWnhNP8tJ4WsGcYiX24Gjkc9ALstLbHcBj1t3E7EimN6n6kHH+DPV4PpDnuw00NApQp+ViojMj1GRdwYQg==}
     dev: false
 
   /@tauri-apps/api@2.2.0:
@@ -9146,6 +9201,16 @@ packages:
       prismjs: 1.30.0
       react: 18.3.1
       refractor: 3.6.0
+    dev: false
+
+  /react-virtuoso@4.12.6(react-dom@18.3.1)(react@18.3.1):
+    resolution: {integrity: sha512-bfvS6aCL1ehXmq39KRiz/vxznGUbtA27I5I24TYCe1DhMf84O3aVNCIwrSjYQjkJGJGzY46ihdN8WkYlemuhMQ==}
+    peerDependencies:
+      react: '>=16 || >=17 || >= 18 || >= 19'
+      react-dom: '>=16 || >=17 || >= 18 || >=19'
+    dependencies:
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
     dev: false
 
   /react@18.3.1:

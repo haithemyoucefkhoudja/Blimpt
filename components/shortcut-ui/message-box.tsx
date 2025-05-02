@@ -1,20 +1,21 @@
-import { cn } from "@/lib/utils";
-import { Message } from "@/types/Message";
-import { BookCopy, Layers3, Plus, Share, UserIcon } from "lucide-react";
-import { useEffect, useState } from "react";
-import { MarkdownMessage } from "@/components/ui/react-markdown";
-import MessageSources from "./message-sources";
-import Copy from "../Copy";
-import Rewrite from "../Rewrite";
+"use client"
 
-const MessageBox = ({
+import { cn } from "@/lib/utils"
+import type { Message } from "@/types/Message"
+import { BookCopy, Layers3, Plus, Share, UserIcon } from "lucide-react"
+import { memo, useEffect, useRef, useState } from "react"
+import { MarkdownMessage } from "@/components/ui/react-markdown"
+import MessageSources from "./message-sources"
+import Copy from "../Copy"
+import Rewrite from "../Rewrite"
+
+const MessageBox = memo(function MessageBox({
   message,
   messageIndex,
-  // history,
+  history,
   rewrite,
   loading,
   type,
-  // isLast,
   sendMessage,
 }: {
   message: Message;
@@ -22,13 +23,10 @@ const MessageBox = ({
   history: Message[];
   loading?: boolean;
   rewrite: (messageId: string, conversationId: number) => void;
-    // isLast: boolean;
   type: 'list' | 'single';
-  // rewrite: (messageId: string) => void;
-  sendMessage?: (message: string) => void ;
-  }) => {
+  sendMessage?: (message: string) => void;
+  }) {
   const [parsedMessage, setParsedMessage] = useState(message.content);
-
   useEffect(() => {
     const regex = /\[(\d+)\]/g;
 
@@ -41,8 +39,7 @@ const MessageBox = ({
         message.content.replace(
           regex,
           (_, number) =>
-            `<a href="${
-              message.sources?.[number - 1]?.metadata?.url
+            `<a href="${message.sources?.[number - 1]?.metadata?.url
             }" target="_blank" class="bg-light-secondary dark:bg-dark-secondary px-1 rounded ml-1 no-underline text-xs text-black/70 dark:text-white/70">${number}</a>`
         )
       );
@@ -52,7 +49,7 @@ const MessageBox = ({
   }, [message.content, message.sources, message.role]);
   
   return (
-    <div className="w-full max-w-full break-words" data-tauri-drag-region>
+    <div className={cn("w-full max-w-full break-words")} data-tauri-drag-region >
       {message.role === "user" && (
         <div className="flex flex-col space-y-2" data-tauri-drag-region>
           <div className="flex flex-row items-center space-x-2 mx-1" data-tauri-drag-region>
@@ -105,13 +102,6 @@ const MessageBox = ({
                     </object>
                   </div>
                 )}
-                {/* <Disc3
-                    className={cn(
-                      "text-black dark:text-white",
-                      loading ? "animate-spin" : "animate-none"
-                    )}
-                    size={20}
-                  /> */}
                 <h3 className="text-black dark:text-white font-medium text-xl">
                   Answer:
                 </h3>
@@ -119,12 +109,11 @@ const MessageBox = ({
               
               <MarkdownMessage reasoning={message.reasoning} content={parsedMessage}></MarkdownMessage>
               {loading ? null : (
-                // <></>
                 <div data-tauri-drag-region className="flex flex-row items-center justify-between w-full text-black dark:text-white py-4 -mx-2">
                   <div data-tauri-drag-region className="flex flex-row items-center space-x-1">
-                     <button className="p-2 text-black/70 dark:text-white/70 rounded-xl hover:bg-light-secondary dark:hover:bg-dark-secondary transition duration-200 hover:text-black text-black dark:hover:text-white">
+                    <button className="p-2 text-black/70 dark:text-white/70 rounded-xl hover:bg-light-secondary dark:hover:bg-dark-secondary transition duration-200 hover:text-black text-black dark:hover:text-white">
                       <Share size={18} />
-                     </button>
+                    </button>
                     <Rewrite type={type} rewrite={() => {
                       rewrite(message.id, message.conversation_id as number);
                       
@@ -132,22 +121,6 @@ const MessageBox = ({
                   </div>
                   <div data-tauri-drag-region className="flex flex-row items-center space-x-1">
                     <Copy initialMessage={message.content} message={message} />
-                    {/* <button
-                      onClick={() => {
-                        if (speechStatus === 'started') {
-                          stop();
-                        } else {
-                          start();
-                        }
-                      }}
-                      className="p-2 text-black/70 dark:text-white/70 rounded-xl hover:bg-light-secondary dark:hover:bg-dark-secondary transition duration-200 hover:text-black dark:hover:text-white"
-                    >
-                      {speechStatus === 'started' ? (
-                        <StopCircle size={18} />
-                      ) : (
-                        <Volume2 size={18} />
-                      )}
-                    </button> */}
                   </div>
                 </div>
               )}
@@ -193,19 +166,10 @@ const MessageBox = ({
                 )}
             </div>
           </div>
-          {/* <div className="lg:sticky lg:top-20 flex flex-col items-center space-y-3 w-full lg:w-3/12 z-30 h-full pb-4">
-              <SearchImages
-                query={history[messageIndex - 1].content}
-                chatHistory={history.slice(0, messageIndex - 1)}
-              />
-              <SearchVideos
-                chatHistory={history.slice(0, messageIndex - 1)}
-                query={history[messageIndex - 1].content}
-              />
-            </div> */}
         </div>
       )}
     </div>
-  );
-};
-export default MessageBox;
+  )
+});
+export default MessageBox
+
