@@ -68,26 +68,20 @@ const MessageList = memo(function MessageList({
       )}
 
       {/* The main scrollable area */}
-      {/* Removed <ListScrollArea> */}
 
       {/* Conditionally render based on conversation and messages */}
       {!conversationId ? (
         <div className="text-center text-muted-foreground p-4 flex-1 flex items-center justify-center">
-          {" "}
           {/* Added flex centering for placeholders */}
           Select a conversation to view messages
         </div>
       ) : !messages || messages.length === 0 ? (
         !chatLoading ? (
           <div className="text-center text-muted-foreground p-4 flex-1 flex items-center justify-center">
-            {" "}
-            {/* Added flex centering */}
             No messages in this conversation
           </div>
         ) : (
           <div className="text-center text-muted-foreground p-4 flex-1 flex items-center justify-center">
-            {" "}
-            {/* Added flex centering */}
             Loading messages...
           </div>
         )
@@ -113,7 +107,7 @@ const MessageList = memo(function MessageList({
               }}
             >
               {virtualItems.map((virtualRow) => {
-                const message = messages[virtualRow.index];
+                const message = messages[virtualRow.index]; // Use the correct index
                 // console.log("message:", message); // Keep for debugging if needed
                 if (!message) return null;
 
@@ -122,7 +116,7 @@ const MessageList = memo(function MessageList({
                     key={virtualRow.key}
                     data-index={virtualRow.index}
                     ref={rowVirtualizer.measureElement}
-                    className="w-full" // Item wrapper
+                    className="w-full"
                   >
                     {/* Render your MessageBox component */}
                     <MessageBox
