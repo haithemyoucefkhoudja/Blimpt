@@ -4,5 +4,5 @@
     windows_subsystem = "windows"
 )]
 fn main() {
-    quick_gpt_app_lib::run()
+    blimpt_app_lib::run()
 }

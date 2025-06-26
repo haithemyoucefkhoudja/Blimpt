@@ -5,27 +5,24 @@ import type { Message } from "@/types/Message";
 import { BookCopy, Layers3, Plus, Share, UserIcon } from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
 import { MarkdownMessage } from "@/components/ui/react-markdown";
-import MessageSources from "./message-sources";
-import Copy from "../Copy";
+// import MessageSources from "./message-sources";
+import { Copy } from "../Copy";
 import Rewrite from "../Rewrite";
+import MessageSources from "./message-sources";
 
 const MessageBox = memo(function MessageBox({
   message,
   messageIndex,
-  history,
   rewrite,
-  loading,
-  type,
-  sendMessage,
-}: {
+}: // sendMessage,
+{
   message: Message;
   messageIndex: number;
-  history: Message[];
-  loading?: boolean;
-  rewrite: (messageId: string, conversationId: number) => void;
+  rewrite: (messageId: string) => void;
   type: "list" | "single";
-  sendMessage?: (message: string) => void;
 }) {
+  // if (message.role == "user") console.log("user message:", message);
+  const isLoading = message.isLoading;
   const [parsedMessage, setParsedMessage] = useState(message.content);
   useEffect(() => {
     const regex = /\[(\d+)\]/g;
@@ -50,26 +47,34 @@ const MessageBox = memo(function MessageBox({
   }, [message.content, message.sources, message.role]);
 
   return (
-    <div className={cn("w-full max-w-full break-words")} data-tauri-drag-region>
+    <div
+      className={cn("w-full max-w-full break-words overflow-x-hidden")}
+      data-tauri-drag-region
+    >
       {message.role === "user" && (
         <div className="flex flex-col space-y-2" data-tauri-drag-region>
           <div
             className="flex flex-row items-center space-x-2 mx-1"
             data-tauri-drag-region
           >
-            <h3 className="text-black dark:text-white font-medium text-xl">
-              {message.id}
-            </h3>
-            <UserIcon className="text-black dark:text-white" size={25} />
+            <div className="flex flex-col items-center">
+              <UserIcon className="text-black dark:text-white" size={25} />
+              {/* <span className="text-black/60 dark:text-white/60 text-[10px] mt-0.5">
+                {message.id}
+              </span> */}
+            </div>
             <h3 className="text-black dark:text-white font-medium text-xl">
               You:
             </h3>
+            <span className="text-black/60 dark:text-white/60 text-[10px] mt-0.5">
+              {message.id}
+            </span>
           </div>
           <div
             className={cn("w-full", messageIndex === 0 ? "pt-0" : "py-2")}
             data-tauri-drag-region
           >
-            <p className=" break-words text-wrap">{message.content}</p>
+            <p className="break-words text-wrap">{parsedMessage}</p>
           </div>
         </div>
       )}
@@ -81,7 +86,7 @@ const MessageBox = memo(function MessageBox({
         >
           <div
             data-tauri-drag-region
-            className="flex flex-col space-y-6 w-full lg:w-9/12"
+            className="flex flex-col space-y-6 w-full"
           >
             {message.sources && message.sources.length > 0 && (
               <div data-tauri-drag-region className="flex flex-col space-y-2">
@@ -102,46 +107,68 @@ const MessageBox = memo(function MessageBox({
                 data-tauri-drag-region
                 className="flex flex-row items-center space-x-2"
               >
-                <h3 className="text-black dark:text-white font-medium text-xl">
-                  {message.id}
-                </h3>
-                {loading ? (
+                {isLoading ? (
                   <div
                     data-tauri-drag-region
-                    className="w-10 h-10 aspect-square flex items-center justify-center"
+                    className="flex flex-col items-center"
                   >
-                    <object
-                      type="image/svg+xml"
-                      data="/AnimatedLoading.svg"
-                      className="w-full h-full p-0"
-                    >
-                      Your browser does not support SVG
-                    </object>
+                    <div className="w-10 h-10 aspect-square flex items-center justify-center">
+                      <object
+                        type="image/svg+xml"
+                        data="/AnimatedLoading.svg"
+                        className="w-full h-full p-0"
+                      >
+                        Your browser does not support SVG
+                      </object>
+                    </div>
+                    {/* <span className="text-black/60 dark:text-white/60 text-[10px] mt-0.5">
+                      {message.id}
+                    </span> */}
                   </div>
                 ) : (
                   <div
                     data-tauri-drag-region
-                    className="w-10 h-10 aspect-square flex items-center justify-center"
+                    className="flex flex-col items-center"
                   >
-                    <object
-                      type="image/svg+xml"
-                      data="/bot-logo.svg"
-                      className="w-full h-full p-0"
-                    >
-                      Your browser does not support SVG
-                    </object>
+                    <div className="w-10 h-10 aspect-square flex items-center justify-center">
+                      <object
+                        type="image/svg+xml"
+                        data="/bot-logo.svg"
+                        className="w-full h-full p-0"
+                      >
+                        Your browser does not support SVG
+                      </object>
+                    </div>
+                    {/* <span className="text-black/60 dark:text-white/60 text-[10px] mt-0.5">
+                      {message.id}
+                    </span> */}
                   </div>
                 )}
                 <h3 className="text-black dark:text-white font-medium text-xl">
                   Answer:
                 </h3>
+                <span className="text-black/60 dark:text-white/60 text-[10px] mt-0.5">
+                  {message.id}
+                </span>
               </div>
-
-              <MarkdownMessage
-                reasoning={message.reasoning}
-                content={parsedMessage}
-              ></MarkdownMessage>
-              {loading ? null : (
+              {!isLoading ? (
+                <MarkdownMessage
+                  reasoning={message.reasoning}
+                  content={parsedMessage}
+                ></MarkdownMessage>
+              ) : (
+                <div data-tauri-drag-region>
+                  {message.reasoning && (
+                    <div className="border-l-2 px-2 border-primary/60">
+                      <p className="text-foreground/55 mb-2 text-wrap break-words">
+                        {message.reasoning}
+                      </p>
+                    </div>
+                  )}
+                  <p className="break-words text-wrap">{parsedMessage}</p>
+                </div>
+              )}
+              {isLoading ? null : (
                 <div
                   data-tauri-drag-region
                   className="flex flex-row items-center justify-between w-full text-black dark:text-white py-4 -mx-2"
@@ -154,11 +181,9 @@ const MessageBox = memo(function MessageBox({
                       <Share size={18} />
                     </button>
                     <Rewrite
-                      type={type}
                       rewrite={() => {
-                        rewrite(message.id, message.conversation_id as number);
+                        rewrite(message.id);
                       }}
-                      messageId={message.id}
                     />
                   </div>
                   <div
@@ -172,7 +197,7 @@ const MessageBox = memo(function MessageBox({
               {message.suggestions &&
                 message.suggestions.length > 0 &&
                 message.role === "assistant" &&
-                !loading && (
+                !isLoading && (
                   <>
                     <div
                       data-tauri-drag-region
@@ -193,7 +218,7 @@ const MessageBox = memo(function MessageBox({
                         data-tauri-drag-region
                         className="flex flex-col space-y-3"
                       >
-                        {message.suggestions.map(
+                        {/* {message.suggestions.map(
                           (suggestion: string, i: number) => (
                             <div
                               data-tauri-drag-region
@@ -220,7 +245,7 @@ const MessageBox = memo(function MessageBox({
                               </div>
                             </div>
                           )
-                        )}
+                        )} */}
                       </div>
                     </div>
                   </>

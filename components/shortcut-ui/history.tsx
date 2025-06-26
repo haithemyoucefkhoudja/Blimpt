@@ -1,7 +1,6 @@
 "use client";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSquare } from "lucide-react";
 import type { Conversation } from "@/types/Conversation";
 import { useChat } from "@/providers/chat-provider";
@@ -9,26 +8,23 @@ import { useAppResize, useSizeChange } from "./hooks/use-app-resize";
 import { useInfiniteConversations } from "@/hooks/use-infinite-query";
 import { InfiniteScroll } from "@/components/ui/infinite-scroll";
 import { useGetMessages } from "@/hooks/use-messages-query";
+import { ListScrollArea } from "../ui/list-scroll-area";
 
-interface ConversationListProps {
-  onSelectConversation: (id: Conversation) => void;
-  selectedConversation: Conversation | null;
-}
-
-const WINDOW = "history";
-export function ConversationList({
-  onSelectConversation,
-  selectedConversation,
-}: ConversationListProps) {
+export function ConversationList() {
   const {
     setConversation,
     setError,
     error,
     isLoading: chatLoading,
     setMessages,
+    conversation,
   } = useChat();
-  const { setActiveWindow } = useAppResize();
-  const conversationId = selectedConversation?.id;
+
+  const onSelectConversation = (conversation: Conversation) => {
+    setConversation(conversation);
+  };
+
+  const conversationId = conversation?.id;
   const {
     data: messagesdata,
     isError: isErrorMessage,
@@ -62,14 +58,10 @@ export function ConversationList({
 
   // Update the selected conversation in the context
   useEffect(() => {
-    if (selectedConversation) {
-      setConversation(selectedConversation);
+    if (conversation) {
+      setConversation(conversation);
     }
-    // Maybe clear if deselected?
-    // else {
-    //   setConversation(null);
-    // }
-  }, [selectedConversation, setConversation]);
+  }, [conversation, setConversation]);
 
   // Handle errors from the query
   useEffect(() => {
@@ -86,10 +78,6 @@ export function ConversationList({
   const conversations = data?.pages.flat() || [];
 
   useSizeChange(() => {}, [conversations]);
-
-  useEffect(() => {
-    setActiveWindow(WINDOW);
-  }, [setActiveWindow]);
 
   // Group conversations by date
   const groupedConversations = conversations.reduce((groups, conversation) => {
@@ -136,10 +124,10 @@ export function ConversationList({
   }
 
   return (
-    <div className="w-full max-h-48 overflow-hidden px-2">
-      <ScrollArea className="h-full p-4">
+    <div className="w-full  max-h-96 overflow-hidden px-2">
+      <ListScrollArea className="h-full p-4">
         <h1 className="text-lg font-bold text-primary mb-4">Conversations:</h1>
-        {isLoading || chatLoading ? (
+        {isLoading || chatLoading.state ? (
           <div className="text-center text-muted-foreground py-4">
             Loading ...
           </div>
@@ -161,32 +149,31 @@ export function ConversationList({
                   <h2 className="text-sm font-medium text-muted-foreground mb-2">
                     {groupName}
                   </h2>
-                  {groupConversations.map((conversation) => (
+                  {groupConversations.map((conversationItem) => (
                     <Button
-                      disabled={selectedConversation?.id === conversation.id}
-                      key={conversation.id}
-                      id={String(conversation.id)}
+                      disabled={conversation?.id === conversationItem.id}
+                      key={conversationItem.id}
+                      id={String(conversationItem.id)}
                       variant={
-                        selectedConversation?.id === conversation.id
+                        conversation?.id === conversationItem.id
                           ? "secondary"
                           : "ghost"
                       }
                       className="w-full justify-start mb-2"
-                      onClick={() => onSelectConversation(conversation)}
+                      onClick={() => onSelectConversation(conversationItem)}
                     >
                       <MessageSquare className="mr-2 h-4 w-4" />
                       <div className="flex flex-col items-start overflow-x-hidden">
                         <span className="truncate w-full">
-                          {conversation.title}
+                          {conversationItem.title}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(conversation.timestamp).toLocaleTimeString(
-                            [],
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
+                          {new Date(
+                            conversationItem.timestamp
+                          ).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </span>
                       </div>
                     </Button>
@@ -196,7 +183,8 @@ export function ConversationList({
             })}
           </InfiniteScroll>
         )}
-      </ScrollArea>
+      </ListScrollArea>
     </div>
   );
 }
+ConversationList.displayName = "ConversationList";

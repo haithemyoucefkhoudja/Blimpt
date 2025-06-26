@@ -89,29 +89,29 @@
   cursor: -moz-grab;
   cursor: -webkit-grab;
 }
-/* Add these scrollbar styles */
-.scrollbar-thin {
+/* In your global CSS or a CSS module for MessageList */
+
+/* Target Virtuoso's scroller */
+[data-testid="virtuoso-scroller"]::-webkit-scrollbar {
+  width: 15px; /* Or your w-2.5 equivalent */
+  height: 15px;
+}
+
+[data-testid="virtuoso-scroller"]::-webkit-scrollbar-track {
+  background: transparent; /* Or your track color */
+}
+
+[data-testid="virtuoso-scroller"]::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border)); /* Your bg-border color */
+  border-radius: 9999px; /* rounded-full */
+  border: 1px solid transparent; /* Match p-[1px] and border-l-transparent */
+}
+
+/* For Firefox (less styling capability) */
+[data-testid="virtuoso-scroller"] {
   scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent; /* thumb color, track color */
 }
-
-.scrollbar-thin::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.scrollbar-thumb-neutral-600::-webkit-scrollbar-thumb {
-  background-color: hsl(240 4% 46%);
-  border-radius: 4px;
-}
-
-.scrollbar-thumb-neutral-600:hover::-webkit-scrollbar-thumb {
-  background-color: hsl(240 5% 64%);
-}
-
-.scrollbar-track-transparent::-webkit-scrollbar-track {
-  background-color: transparent;
-}
-
 
 
 @layer base {

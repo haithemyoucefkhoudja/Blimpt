@@ -1,22 +1,29 @@
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { HistoryIcon } from "lucide-react";
+import { useAppResize } from "@/components/shortcut-ui/hooks/use-app-resize";
 
-interface HistoryIndicatorProps { 
-    activeWindow: string;
-    setActiveWindow: () => void;
-  }
-function HistoryIndicator({ activeWindow, setActiveWindow }: HistoryIndicatorProps) {
-    function handleClick(): void {
-        setActiveWindow();
-    }
+function HistoryIndicator() {
+  const { ActiveWindow, setActiveWindow } = useAppResize();
 
-    return (
-        <Button onClick={handleClick} variant='ghost' type="button" size="icon" className={cn("rounded-full relative ", activeWindow === "history" ? "bg-accent" : "")}>
-          
-          <HistoryIcon className="h-4 w-4" />
-        </Button>
-    );
+  const handleClick = () => {
+    setActiveWindow("history");
+  };
+
+  return (
+    <Button
+      onClick={handleClick}
+      variant="ghost"
+      type="button"
+      size="icon"
+      className={cn(
+        "rounded-full relative ",
+        ActiveWindow === "history" ? "bg-accent" : ""
+      )}
+    >
+      <HistoryIcon className="h-4 w-4" />
+    </Button>
+  );
 }
 
-export default HistoryIndicator
+export default HistoryIndicator;

@@ -21,6 +21,9 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_global_shortcut::Builder::new().build());
+
             #[cfg(debug_assertions)]
             const IS_DEV: bool = true;
 
@@ -33,20 +36,20 @@ pub fn run() {
                 .shadow(false)
                 .center();
 
-            WebviewWindowBuilder::new(app, "local", WebviewUrl::App("second".into()))
-                .title("Local Window")
-                .visible(false)
-                .maximized(true)
-                .build()
-                .unwrap();
+            // WebviewWindowBuilder::new(app, "local", WebviewUrl::App("second".into()))
+            //     .title("Local Window")
+            //     .visible(false)
+            //     .maximized(true)
+            //     .build()
+            //     .unwrap();
 
-            let command_window =
-                WebviewWindowBuilder::new(app, "commands", WebviewUrl::App("commands".into()))
-                    .title("Commands Window")
-                    .visible(false)
-                    .transparent(true)
-                    .decorations(false)
-                    .shadow(false);
+            // let command_window =
+            //     WebviewWindowBuilder::new(app, "commands", WebviewUrl::App("commands".into()))
+            //         .title("Commands Window")
+            //         .visible(false)
+            //         .transparent(true)
+            //         .decorations(false)
+            //         .shadow(false);
             // Create menu items
             let open_local_i =
                 MenuItem::with_id(app, "open_local", "Quick Tool Window", true, None::<&str>)?;
@@ -119,7 +122,7 @@ pub fn run() {
             let _window = win_builder.build().unwrap();
 
             // let _local_window = local_window.build().unwrap();
-            let _command_window = command_window.build().unwrap();
+            // let _command_window = command_window.build().unwrap();
             // set background color only when building for macOS
             #[cfg(target_os = "macos")]
             {

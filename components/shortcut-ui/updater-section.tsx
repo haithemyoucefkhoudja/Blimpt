@@ -107,9 +107,9 @@ const UpdaterSection = () => {
   };
 
   // Check for updates when component mounts
-  useEffect(() => {
-    checkForUpdates();
-  }, []);
+  // useEffect(() => {
+  //   checkForUpdates();
+  // }, []);
 
   return (
     <Card className="w-full mt-6 border-0 bg-background shadow-none">

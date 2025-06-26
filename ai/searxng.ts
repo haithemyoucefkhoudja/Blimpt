@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 interface SearxngSearchOptions {
   categories?: string[];
   engines?: string[];
@@ -20,16 +20,15 @@ export interface SearxngSearchResult {
 export const searchSearxng = async (
   query: string,
   port: string,
-  opts?: SearxngSearchOptions,
+  opts?: SearxngSearchOptions
 ) => {
-  console.log(`http://localhost:${port}/search?format=json`);
   const url = new URL(`http://localhost:${port}/search?format=json`);
-  url.searchParams.append('q', query);
+  url.searchParams.append("q", query);
 
   if (opts) {
     Object.keys(opts).forEach((key) => {
       if (Array.isArray((opts as any)[key])) {
-        url.searchParams.append(key, (opts as any)[key].join(','));
+        url.searchParams.append(key, (opts as any)[key].join(","));
         return;
       }
       url.searchParams.append(key, (opts as any)[key]);

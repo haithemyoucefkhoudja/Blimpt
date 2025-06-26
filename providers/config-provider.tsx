@@ -1,112 +1,229 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  ReactNode,
+  useMemo,
+} from "react";
 import { load } from "@tauri-apps/plugin-store";
 import { Config, General, TAPI_ENDPOINTS } from "@/types/settings/config";
 import { Provider } from "@/types/settings/provider";
 import { Model } from "@/types/settings/model";
 import { defaultConfig } from "@/utils/constants";
 
-// Define the shape of our context
+// --- 1. Define State and Action Types ---
+
+interface ConfigState {
+  config: Config;
+  isUpdated: boolean;
+  isDeepThinking: boolean;
+  isSearch: boolean;
+  port: string | null;
+}
+
+type ConfigAction =
+  | { type: "SET_CONFIG_LOADED"; payload: Config }
+  | {
+      type: "UPDATE_CONFIG_SECTION";
+      payload: { section: keyof Config; value: any };
+    }
+  | { type: "SAVE_SUCCESS" }
+  | { type: "TOGGLE_DEEP_THINKING" }
+  | { type: "TOGGLE_SEARCH" }
+  | { type: "SET_PORT"; payload: string | null };
+
+// --- 2. Define the Initial State ---
+
+const initialState: ConfigState = {
+  config: defaultConfig,
+  isUpdated: false,
+  isDeepThinking: false,
+  isSearch: false,
+  port: null,
+};
+
+// --- 3. Create the Reducer Function ---
+
+const configReducer = (
+  state: ConfigState,
+  action: ConfigAction
+): ConfigState => {
+  switch (action.type) {
+    case "SET_CONFIG_LOADED":
+      return {
+        ...state,
+        config: action.payload,
+        isUpdated: false, // Reset update status on load
+      };
+
+    case "UPDATE_CONFIG_SECTION": {
+      const { section, value } = action.payload;
+
+      // Keep the special filtering logic for providers
+      if (section === "providers") {
+        const filteredModels = state.config.models.filter((model) =>
+          (value as Provider[]).some(
+            (provider) => provider.name === model.provider
+          )
+        );
+        return {
+          ...state,
+          config: {
+            ...state.config,
+            models: filteredModels,
+            [section]: value as Provider[],
+          },
+          isUpdated: true,
+        };
+      }
+
+      // Handle all other sections
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          [section]: value,
+        },
+        isUpdated: true,
+      };
+    }
+
+    case "SAVE_SUCCESS":
+      return {
+        ...state,
+        isUpdated: false,
+      };
+
+    case "TOGGLE_DEEP_THINKING":
+      return {
+        ...state,
+        isDeepThinking: !state.isDeepThinking,
+      };
+
+    case "TOGGLE_SEARCH":
+      return {
+        ...state,
+        isSearch: !state.isSearch,
+      };
+
+    case "SET_PORT":
+      return {
+        ...state,
+        port: action.payload,
+      };
+
+    default:
+      return state;
+  }
+};
+
+// --- Context Definition (No changes needed here) ---
+
 interface ConfigContextType {
   port: string | null;
   setPort: (port: string | null) => void;
   config: Config;
-  updateConfig: (section: keyof Config,  value: any) => void;
+  updateConfig: (section: keyof Config, value: any) => void;
   saveConfig: () => Promise<void>;
   isUpdated: boolean;
   isDeepThinking: boolean;
   setIsDeepThinking: () => void;
   isSearch: boolean;
-  setIsSearch: ()=>void;
+  setIsSearch: () => void;
 }
 
-
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
+// --- 4. The Refactored Provider Component ---
 
 export const ConfigProvider = ({ children }: { children: ReactNode }) => {
-    const [config, setConfig] = useState<Config>(defaultConfig);
-    const [isUpdated, setIsUpdated] = useState(false);
-    const [isDeepThinking, setIsDeepThinking] = useState(false);
-    const [isSearch, setIsSearch] = useState(false);
-    const [port, setPort] = useState<string | null>(null);
+  // All state is now managed by the reducer
+  const [state, dispatch] = useReducer(configReducer, initialState);
+  const { config, isUpdated, isDeepThinking, isSearch, port } = state;
+
+  // The loading effect now dispatches an action
   useEffect(() => {
     const loadConfig = async () => {
       const store = await load("config.json", { autoSave: false });
-      const storedConfig = await store.get<Config>("config");
-      if (storedConfig?.providers.length === 0) {
-        storedConfig.providers = defaultConfig.providers;  
-        await store.set("config", storedConfig);
-        await store.save();      
+      let storedConfig = await store.get<Config>("config");
+
+      // The logic for checking and back-filling defaults is great, keep it.
+      // We'll just make sure to save if we modify it.
+      let needsSave = false;
+      if (!storedConfig) {
+        storedConfig = defaultConfig;
+        needsSave = true;
       }
-      if (storedConfig?.models.length == 0) {
+      if (!storedConfig.providers || storedConfig.providers.length === 0) {
+        storedConfig.providers = defaultConfig.providers;
+        needsSave = true;
+      }
+      if (!storedConfig.models || storedConfig.models.length === 0) {
         storedConfig.models = defaultConfig.models;
-        await store.set("config", storedConfig);
-        await store.save();
+        needsSave = true;
       }
-      if (storedConfig && !storedConfig?.selectedModel) { 
+      if (!storedConfig.selectedModel) {
         storedConfig.selectedModel = defaultConfig.selectedModel;
+        needsSave = true;
+      }
+      if (!storedConfig.selectedDeepThinkingModel) {
+        storedConfig.selectedDeepThinkingModel =
+          defaultConfig.selectedDeepThinkingModel;
+        needsSave = true;
+      }
+
+      if (needsSave) {
         await store.set("config", storedConfig);
         await store.save();
       }
-      if (storedConfig && !storedConfig?.selectedDeepThinkingModel) { 
-        storedConfig.selectedDeepThinkingModel = defaultConfig.selectedDeepThinkingModel;
-        await store.set("config", storedConfig);
-        await store.save();
-      }
-      
-        
-      if (storedConfig) {
-          setConfig(storedConfig);
-    }
+
+      dispatch({ type: "SET_CONFIG_LOADED", payload: storedConfig });
     };
     loadConfig();
   }, []);
 
-const updateConfig = (section: keyof Config, value: Provider[] | Model[] | TAPI_ENDPOINTS | General) => {
-    if (section === "providers") { 
-        const filteredModels = config.models.filter(model => { 
-            return (value as Provider[]).some(provider => provider.name === model.provider)
-        })
-        setConfig((prev) => ({
-            ...prev,
-            models: filteredModels,
-            [section]: value as Provider[]
-        }));
-        setIsUpdated(true);
-        return;
-    }
-    setConfig((prev) => ({
-      ...prev,
-      [section]: value,
-    }));
-    setIsUpdated(true);
+  // Public functions now dispatch actions
+  const updateConfig = (section: keyof Config, value: any) => {
+    dispatch({ type: "UPDATE_CONFIG_SECTION", payload: { section, value } });
   };
 
   const saveConfig = async () => {
     const store = await load("config.json", { autoSave: false });
-    await store.set("config", config);
+    await store.set("config", config); // Use config from state
     await store.save();
-    setIsUpdated(false);
+    dispatch({ type: "SAVE_SUCCESS" });
   };
 
+  const setIsDeepThinking = () => dispatch({ type: "TOGGLE_DEEP_THINKING" });
+  const setIsSearch = () => dispatch({ type: "TOGGLE_SEARCH" });
+  const setPort = (port: string | null) =>
+    dispatch({ type: "SET_PORT", payload: port });
+
+  // Memoize the context value to prevent unnecessary re-renders of consumers
+  const contextValue = useMemo(
+    () => ({
+      config,
+      updateConfig,
+      saveConfig,
+      isUpdated,
+      isDeepThinking,
+      setIsDeepThinking,
+      isSearch,
+      setIsSearch,
+      port,
+      setPort,
+    }),
+    [config, isUpdated, isDeepThinking, isSearch, port]
+  );
+
   return (
-    <ConfigContext.Provider value={{
-      config, updateConfig, saveConfig, isUpdated, isDeepThinking, setIsDeepThinking() {
-        setIsDeepThinking(prev => !prev);
-      },
-      isSearch, setIsSearch: () => {
-        setIsSearch(prev =>!prev);
-      },
-      
-      port, setPort: (port: string | null) => {
-        setPort(port);
-      }
-    }
-    }>
+    <ConfigContext.Provider value={contextValue}>
       {children}
     </ConfigContext.Provider>
   );
 };
 
+// The consumer hook remains exactly the same
 export const useConfig = (): ConfigContextType => {
   const context = useContext(ConfigContext);
   if (!context) {

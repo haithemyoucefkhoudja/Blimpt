@@ -1,11 +1,8 @@
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
-import { useState, type ReactNode } from "react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState, type ReactNode } from "react";
 
 interface QueryProviderProps {
-    
-  children: ReactNode
+  children: ReactNode;
 }
 
 export function QueryProvider({ children }: QueryProviderProps) {
@@ -18,13 +15,13 @@ export function QueryProvider({ children }: QueryProviderProps) {
             refetchOnWindowFocus: false,
           },
         },
-      }),
-  )
+      })
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </QueryClientProvider>
-  )
+  );
 }

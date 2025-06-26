@@ -13,14 +13,11 @@ import {
 } from "@langchain/core/runnables";
 import { BaseMessage } from "@langchain/core/messages";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import LineListOutputParser from "../lib/outputParsers/listLineOutputParser";
-import LineOutputParser from "../lib/outputParsers/lineOutputParser";
+import LineListOutputParser from "@/ai/outputParsers/listLineOutputParser";
+import LineOutputParser from "@/ai/outputParsers/lineOutputParser";
 import { getDocumentsFromLinks } from "@/utils/documents";
 import { Document } from "langchain/document";
-import { searchSearxng } from "../lib/searxng";
-// import path from 'path';
-// import fs from 'fs';
-import computeSimilarity from "@/utils/computeSimilarity";
+import { searchSearxng } from "@/ai/searxng";
 import formatChatHistoryAsString from "@/utils/formatHistory";
 import { EventEmitter } from "eventemitter3";
 import { StreamEvent } from "@langchain/core/tracers/log_stream";
@@ -76,12 +73,12 @@ class MetaSearchAgent implements MetaSearchAgentType {
         const questionOutputParser = new LineOutputParser({
           key: "question",
         });
-        
-          const links = await linksOutputParser.parse(input);
-          let question = this.config.summarizer
-            ? await questionOutputParser.parse(input)
-            : input;
-        
+
+        const links = await linksOutputParser.parse(input);
+        let question = this.config.summarizer
+          ? await questionOutputParser.parse(input)
+          : input;
+
         if (question === "not_needed") {
           return { query: "", docs: [] };
         }
@@ -198,38 +195,37 @@ class MetaSearchAgent implements MetaSearchAgentType {
 
                 docs.push(document);
               } catch (error: any) {
-                console.error('Something Wrong Happened:', error.message);
+                console.error("Something Wrong Happened:", error.message);
               }
             })
           );
           return { query: question, docs: docs };
         } else {
-            const res = await searchSearxng(question, port, {
-              language: "en",
-              engines: this.config.activeEngines,
-            });
-            if (!res.results) {
-              throw new Error('No result was found Searxng API has an issue')
-            }
+          const res = await searchSearxng(question, port, {
+            language: "en",
+            engines: this.config.activeEngines,
+          });
+          if (!res.results) {
+            throw new Error("No result was found Searxng API has an issue");
+          }
 
-            const documents = res.results.map(
-              (result) =>
-                new Document({
-                  pageContent:
-                    result.content ||
-                    (this.config.activeEngines.includes("youtube")
-                      ? result.title
-                      : "") /* Todo: Implement transcript grabbing using Youtubei (source: https://www.npmjs.com/package/youtubei) */,
-                  metadata: {
-                    title: result.title,
-                    url: result.url,
-                    ...(result.img_src && { img_src: result.img_src }),
-                  },
-                })
-            );
+          const documents = res.results.map(
+            (result) =>
+              new Document({
+                pageContent:
+                  result.content ||
+                  (this.config.activeEngines.includes("youtube")
+                    ? result.title
+                    : "") /* Todo: Implement transcript grabbing using Youtubei (source: https://www.npmjs.com/package/youtubei) */,
+                metadata: {
+                  title: result.title,
+                  url: result.url,
+                  ...(result.img_src && { img_src: result.img_src }),
+                },
+              })
+          );
 
-            return { query: question, docs: documents };
-          
+          return { query: question, docs: documents };
         }
       }),
     ]);
@@ -239,9 +235,8 @@ class MetaSearchAgent implements MetaSearchAgentType {
     llm: BaseChatModel,
     port: string,
     fileIds: string[],
-    embeddings: Embeddings|undefined,
+    embeddings: Embeddings | undefined,
     optimizationMode: "speed" | "balanced" | "quality"
-    
   ) {
     return RunnableSequence.from([
       RunnableMap.from({
@@ -266,7 +261,7 @@ class MetaSearchAgent implements MetaSearchAgentType {
               chat_history: processedHistory,
               query,
             });
-            
+
             query = searchRetrieverResult.query;
             docs = searchRetrieverResult.docs;
           }
@@ -315,7 +310,6 @@ class MetaSearchAgent implements MetaSearchAgentType {
   ) {
     try {
       for await (const event of stream) {
-        
         if (
           event.event === "on_chain_end" &&
           event.name === "FinalSourceRetriever"
@@ -326,70 +320,71 @@ class MetaSearchAgent implements MetaSearchAgentType {
             JSON.stringify({ type: "sources", data: event.data.output })
           );
         }
-      //   {
-      //     "event": "on_llm_stream",
-      //     "name": "ChatDeepSeek",
-      //     "run_id": "78b7b4b7-6db1-44e9-bcd8-a1f37cd8a1c3",
-      //     "tags": [
-      //         "seq:step:3"
-      //     ],
-      //     "metadata": {
-      //         "ls_provider": "openai",
-      //         "ls_model_name": "deepseek-reasoner",
-      //         "ls_model_type": "chat",
-      //         "ls_temperature": 0
-      //     },
-      //     "data": {
-      //         "chunk": {
-      //             "text": " viewers",
-      //             "generationInfo": {
-      //                 "prompt": 0,
-      //                 "completion": 0
-      //             },
-      //             "message": {
-      //                 "lc": 1,
-      //                 "type": "constructor",
-      //                 "id": [
-      //                     "langchain_core",
-      //                     "messages",
-      //                     "AIMessageChunk"
-      //                 ],
-      //                 "kwargs": {
-      //                     "content": " viewers",
-      //                     "tool_call_chunks": [],
-      //                     "additional_kwargs": {
-      //                         "reasoning_content": null
-      //                     },
-      //                     "id": "ed3c48df-ff1f-483b-90c4-6fce8b626b68",
-      //                     "response_metadata": {
-      //                         "prompt": 0,
-      //                         "completion": 0,
-      //                         "usage": {}
-      //                     },
-      //                     "tool_calls": [],
-      //                     "invalid_tool_calls": []
-      //                 }
-      //             }
-      //         }
-      //     }
+        //   {
+        //     "event": "on_llm_stream",
+        //     "name": "ChatDeepSeek",
+        //     "run_id": "78b7b4b7-6db1-44e9-bcd8-a1f37cd8a1c3",
+        //     "tags": [
+        //         "seq:step:3"
+        //     ],
+        //     "metadata": {
+        //         "ls_provider": "openai",
+        //         "ls_model_name": "deepseek-reasoner",
+        //         "ls_model_type": "chat",
+        //         "ls_temperature": 0
+        //     },
+        //     "data": {
+        //         "chunk": {
+        //             "text": " viewers",
+        //             "generationInfo": {
+        //                 "prompt": 0,
+        //                 "completion": 0
+        //             },
+        //             "message": {
+        //                 "lc": 1,
+        //                 "type": "constructor",
+        //                 "id": [
+        //                     "langchain_core",
+        //                     "messages",
+        //                     "AIMessageChunk"
+        //                 ],
+        //                 "kwargs": {
+        //                     "content": " viewers",
+        //                     "tool_call_chunks": [],
+        //                     "additional_kwargs": {
+        //                         "reasoning_content": null
+        //                     },
+        //                     "id": "ed3c48df-ff1f-483b-90c4-6fce8b626b68",
+        //                     "response_metadata": {
+        //                         "prompt": 0,
+        //                         "completion": 0,
+        //                         "usage": {}
+        //                     },
+        //                     "tool_calls": [],
+        //                     "invalid_tool_calls": []
+        //                 }
+        //             }
+        //         }
+        //     }
         // }
-        
-        if (event.event == 'on_llm_stream' &&
-          event.name == 'ChatDeepSeek') {
-            if (event.data.chunk?.message?.additional_kwargs?.reasoning_content) {
-              emitter.emit(
-                "data",
-                JSON.stringify({ type: "reasoning", data: event.data.chunk?.message.additional_kwargs.reasoning_content })
-              );
-            }
+
+        if (event.event == "on_llm_stream" && event.name == "ChatDeepSeek") {
+          if (event.data.chunk?.message?.additional_kwargs?.reasoning_content) {
+            emitter.emit(
+              "data",
+              JSON.stringify({
+                type: "reasoning",
+                data: event.data.chunk?.message.additional_kwargs
+                  .reasoning_content,
+              })
+            );
+          }
         }
-      
+
         if (
           event.event === "on_chain_stream" &&
           event.name === "FinalResponseGenerator"
         ) {
-          
-          
           emitter.emit(
             "data",
             JSON.stringify({ type: "response", data: event.data.chunk })
@@ -402,15 +397,14 @@ class MetaSearchAgent implements MetaSearchAgentType {
           emitter.emit("end");
         }
       }
+    } catch (error: any) {
+      console.error("Streaming error:", error);
+      emitter.emit(
+        "data",
+        JSON.stringify({ type: "error", data: error.message })
+      );
+      emitter.emit("end");
     }
-  catch (error: any) {
-    console.error("Streaming error:", error);
-    emitter.emit(
-      "data",
-      JSON.stringify({ type: "error", data: error.message })
-    );
-    emitter.emit("end");
-  }
   }
 
   async searchAndAnswer(

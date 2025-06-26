@@ -3,9 +3,7 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main",
-    "local",
-    "commands"
+    "main"
   ],
   "permissions": [
     "core:default",

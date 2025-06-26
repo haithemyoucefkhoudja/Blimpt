@@ -1,33 +1,32 @@
-import { cn } from '@/lib/utils'
-import {  MessageCirclePlus } from 'lucide-react'
+import { cn } from "@/lib/utils";
+import { MessageCirclePlus } from "lucide-react";
+import { useChat } from "@/providers/chat-provider";
+import { Button } from "../ui/button";
+import { useAppResize } from "./hooks/use-app-resize";
 
-import { Button } from '../ui/button'
-
-interface NewChatIndicatorProps { 
-    activeWindow: string;
-    setActiveWindow: () => void;
-    isLoading: boolean;
-    newChatStarter: () => void;
-  }
-function NewChatIndicator({ activeWindow, isLoading, newChatStarter, setActiveWindow }: NewChatIndicatorProps
-
-) {
+function NewChatIndicator() {
+  const { ActiveWindow, setActiveWindow } = useAppResize();
+  const { isLoading, newChatStarter } = useChat();
   const handleClick = () => {
-    if (isLoading)
-      return;
-    
-    if (activeWindow !== 'chat') {
-      setActiveWindow();
+    if (isLoading.state) return;
+
+    if (ActiveWindow !== "chat") {
+      setActiveWindow("chat");
     }
     newChatStarter();
-    
-    }
+  };
   return (
-    <Button disabled={isLoading} onClick={handleClick} variant='ghost' type="button" size="icon" className={cn("rounded-full flex-shrink-0  relative")}>
-          
-          <MessageCirclePlus className="h-6 w-6" />
+    <Button
+      disabled={isLoading.state}
+      onClick={handleClick}
+      variant="ghost"
+      type="button"
+      size="icon"
+      className={cn("rounded-full flex-shrink-0  relative")}
+    >
+      <MessageCirclePlus className="h-6 w-6" />
     </Button>
-  )
+  );
 }
 
-export default NewChatIndicator
+export default NewChatIndicator;
