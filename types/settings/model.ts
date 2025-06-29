@@ -1,6 +1,7 @@
-export type   Model = {
+export type Model = {
   id: string;
   name: string;
   provider: string;
   isDeepThinking: boolean;
-}
+  isImage: boolean;
+};

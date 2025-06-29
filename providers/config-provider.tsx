@@ -7,9 +7,8 @@ import {
   useMemo,
 } from "react";
 import { load } from "@tauri-apps/plugin-store";
-import { Config, General, TAPI_ENDPOINTS } from "@/types/settings/config";
+import { Config } from "@/types/settings/config";
 import { Provider } from "@/types/settings/provider";
-import { Model } from "@/types/settings/model";
 import { defaultConfig } from "@/utils/constants";
 
 // --- 1. Define State and Action Types ---
@@ -31,7 +30,8 @@ type ConfigAction =
   | { type: "SAVE_SUCCESS" }
   | { type: "TOGGLE_DEEP_THINKING" }
   | { type: "TOGGLE_SEARCH" }
-  | { type: "SET_PORT"; payload: string | null };
+  | { type: "SET_PORT"; payload: string | null }
+  | { type: "TOGGLE_IMAGE"; payload: boolean };
 
 // --- 2. Define the Initial State ---
 
@@ -56,7 +56,6 @@ const configReducer = (
         config: action.payload,
         isUpdated: false, // Reset update status on load
       };
-
     case "UPDATE_CONFIG_SECTION": {
       const { section, value } = action.payload;
 
@@ -146,7 +145,7 @@ export const ConfigProvider = ({ children }: { children: ReactNode }) => {
     const loadConfig = async () => {
       const store = await load("config.json", { autoSave: false });
       let storedConfig = await store.get<Config>("config");
-
+      console.log("storedConfig:", storedConfig);
       // The logic for checking and back-filling defaults is great, keep it.
       // We'll just make sure to save if we modify it.
       let needsSave = false;
@@ -189,6 +188,12 @@ export const ConfigProvider = ({ children }: { children: ReactNode }) => {
 
   const saveConfig = async () => {
     const store = await load("config.json", { autoSave: false });
+    config.selectedDeepThinkingModel = config.models.find(
+      (model) => model.id === config.selectedDeepThinkingModel?.id
+    );
+    config.selectedModel = config.models.find(
+      (model) => model.id === config.selectedModel?.id
+    );
     await store.set("config", config); // Use config from state
     await store.save();
     dispatch({ type: "SAVE_SUCCESS" });

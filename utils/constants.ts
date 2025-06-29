@@ -13,12 +13,14 @@ const defaultModels: Model[] = [
     provider: "DEEPSEEK",
     id: "deepseek",
     isDeepThinking: false,
+    isImage: false,
   },
   {
     name: "deepseek-reasoner",
     provider: "DEEPSEEK",
     id: "deepseek-reasoner",
     isDeepThinking: true,
+    isImage: false,
   },
 ];
 const defaultConfig: Config = {

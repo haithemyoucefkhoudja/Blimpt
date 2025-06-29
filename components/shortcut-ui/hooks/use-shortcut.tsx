@@ -30,20 +30,19 @@ export default function useShortcut() {
     const windowInstance = getCurrentWebviewWindow();
     const physicalWindow = getCurrentWindow();
 
-    const handleCtrlT = async () => {
+    const handleCallShortcut = async () => {
+      console.log("Shortcut handler fired: ", SHORTCUT);
       isFirstInteractionRef.current = false; // The first interaction has occurred
 
       const visible = await windowInstance.isVisible();
-      if (visible) {
-        await windowInstance.hide();
-        setHidden(true);
-      } else {
-        console.log("Shortcut handler fired: ", SHORTCUT);
+      const shiftY = -100;
+      const shiftX = -100;
+      if (!visible) {
         const position = await cursorPosition();
         await windowInstance.show();
         await windowInstance.setFocus();
         physicalWindow.setPosition(
-          new PhysicalPosition(position.x, position.y)
+          new PhysicalPosition(position.x + shiftX, position.y + shiftY)
         );
         physicalWindow.setAlwaysOnTop(true);
         setHidden(false);
@@ -52,11 +51,30 @@ export default function useShortcut() {
 
     const initShortcuts = async () => {
       try {
-        if (await isRegistered(SHORTCUT)) {
-          await unregister(SHORTCUT);
+        const isShortcutRegistered = await isRegistered(SHORTCUT);
+        if (isShortcutRegistered) {
+          console.log(
+            "Shortcut already registered. Attempting to unregister first."
+          );
+          // This try/catch is the key fix
+          try {
+            await unregister(SHORTCUT);
+          } catch (e) {
+            console.error(
+              "Failed to unregister, but will proceed to register.",
+              e
+            );
+          }
         }
-        await register(SHORTCUT, handleCtrlT);
-        console.log("Shortcut registered successfully:", SHORTCUT);
+        try {
+          await register(SHORTCUT, (e) => {
+            console.log("Shortcut handler fired: ", SHORTCUT);
+            handleCallShortcut();
+          });
+          console.log("Shortcut registered successfully:", SHORTCUT);
+        } catch (e) {
+          console.error("Failed to register shortcut:", e);
+        }
       } catch (e) {
         console.error("Failed to initialize shortcuts", e);
       }

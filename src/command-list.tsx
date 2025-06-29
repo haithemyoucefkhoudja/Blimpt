@@ -253,7 +253,7 @@ export function CommandControl() {
   return (
     <Card
       data-tauri-drag-region
-      className="w-full h mx-2 bg-background border-none shadow-none h-full flex flex-col justify-center overflow-hidden max-h-48 rounded-none px-4"
+      className="w-full h mx-2 bg-background border-none shadow-none h-96 flex flex-col justify-center overflow-hidden rounded-none px-4"
     >
       <ScrollArea data-tauri-drag-region>
         <CardHeader data-tauri-drag-region>

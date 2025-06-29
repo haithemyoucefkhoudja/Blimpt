@@ -5,7 +5,7 @@ import type { Message, StoreMessageResponse } from "@/types/Message";
 import { CLOSE_DELAY } from "@/utils/constants";
 import type { chatModel } from "@/ai";
 import { useSizeChange } from "@/components/shortcut-ui/hooks/use-app-resize";
-import { TClipBoard } from "@/types/clipboard";
+import { TAttachment } from "@/types/attachment";
 import useShortcut from "@/components/shortcut-ui/hooks/use-shortcut";
 import { useConfig } from "@/providers/config-provider";
 import type { CustomProvider } from "@/types/settings/provider";
@@ -36,7 +36,7 @@ interface ChatContextValue {
   sendMessage: (
     input: string,
     history: Message[],
-    clipboardItems: TClipBoard[],
+    attachments: TAttachment[],
     messageId?: string
   ) => Promise<void>;
   isLoading: {
@@ -62,10 +62,12 @@ interface InputContextValue {
   setInput: React.Dispatch<React.SetStateAction<string>>;
   searchMode: string;
   setSearchMode: React.Dispatch<React.SetStateAction<string>>;
-  clipboardItems: TClipBoard[];
-  addClipboardItem: (item: string) => void;
-  removeClipboardItem: (index: number) => void;
-  clearAllClipboardItems: () => void;
+  attachments: TAttachment[];
+  addAttachment: (attachment: TAttachment) => void;
+  removeAttachment: (attachmentId: string) => void;
+  clearAttachments: () => void;
+  handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  fileInputRef: React.RefObject<HTMLInputElement>;
 }
 const MAX_RETRIES = 3;
 // Helper functions moved outside component to avoid recreation on each render
@@ -75,8 +77,6 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
   // State management
   const [messages, setMessages] = useState<Message[]>([]);
   const [lastMessage, setLastMessage] = useState<Message | null>(null);
-  const [clipboardItems, setClipboardItems] = useState<TClipBoard[]>([]);
-  // const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [stop, setStop] = useState(true);
@@ -89,6 +89,8 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     state: false,
     id: null,
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachments, setAttachments] = useState<TAttachment[]>([]);
   // Refs
   const stopRef = useRef(stop);
   // Hooks
@@ -121,7 +123,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     () => [
       input,
       lastMessage?.id, // Only track ID instead of entire object
-      clipboardItems.length, // Only track length
+      attachments.length, // Only track length
       isLoading.state,
       error,
       messages.length, // Only track length
@@ -131,7 +133,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     [
       input,
       lastMessage?.id,
-      clipboardItems.length,
+      attachments.length,
       isLoading.state,
       error,
       messages.length,
@@ -237,7 +239,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const saveUserMessage = useCallback(
     async (
       input: string,
-      clipboardItems: TClipBoard[],
+      attachments: TAttachment[],
       conversation?: Partial<Conversation>
     ): Promise<{
       res: StoreMessageResponse;
@@ -282,7 +284,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             role: "user",
             timestamp,
             conversation_id: conversationData.id,
-            clipboardItems,
+            attachments,
           },
           title
         );
@@ -375,7 +377,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     async (
       userMessageContent: string,
       currentHistory: Message[],
-      clipboardItems: TClipBoard[],
+      attachments: TAttachment[],
       existingMessageId?: string
     ) => {
       ("sendLLMMessage");
@@ -400,7 +402,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
           content: userMessageContent,
           role: "user",
           timestamp: new Date().toISOString(),
-          clipboardItems,
+          attachments,
         };
         setMessages((prev) => [...prev, userMessage]);
 
@@ -409,7 +411,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             () =>
               saveUserMessage(
                 userMessage.content,
-                clipboardItems,
+                attachments,
                 conversationDetailsForAssistant
               ),
             MAX_RETRIES
@@ -450,11 +452,11 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         historyForLLM.map((msg) => ({
           role: msg.role as "user" | "assistant",
           content:
-            msg.clipboardItems?.map((item) => item.text).join("\n") +
+            msg.attachments?.map((item) => item.text).join("\n") +
             "\n" +
             msg.content,
         })),
-        clipboardItems.map((item) => item.text).join("\n") +
+        attachments.map((item) => item.text).join("\n") +
           "\n" +
           userMessageContent, // Use the version with context
         config.MAX_TOKENS
@@ -508,7 +510,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       const requestBody: ChatRequestBody = {
         port: port || "",
         query:
-          clipboardItems.map((item) => item.text).join("\n") +
+          attachments.map((item) => item.text).join("\n") +
           "\n" +
           userMessageContent,
         chatModel: currentModel,
@@ -682,7 +684,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       getModel,
       saveUserMessage,
       messages,
-      clipboardItems,
+      attachments,
       conversation,
       lastMessage,
       error,
@@ -695,7 +697,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     async (
       userMessageContent: string,
       currentHistory: Message[],
-      clipboardItems: TClipBoard[],
+      attachments: TAttachment[],
       existingMessageId?: string
     ) => {
       ("sendLLMMessage");
@@ -720,7 +722,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
           content: userMessageContent,
           role: "user",
           timestamp: new Date().toISOString(),
-          clipboardItems,
+          attachments,
         };
         setMessages((prev) => [...prev, userMessage]);
 
@@ -729,7 +731,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             () =>
               saveUserMessage(
                 userMessage.content,
-                clipboardItems,
+                attachments,
                 conversationDetailsForAssistant
               ),
             MAX_RETRIES
@@ -770,11 +772,11 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         historyForLLM.map((msg) => ({
           role: msg.role as "user" | "assistant",
           content:
-            msg.clipboardItems?.map((item) => item.text).join("\n") +
+            msg.attachments?.map((item) => item.text).join("\n") +
             "\n" +
             msg.content,
         })),
-        clipboardItems.map((item) => item.text).join("\n") +
+        attachments.map((item) => item.text).join("\n") +
           "\n" +
           userMessageContent, // Use the version with context
         config.MAX_TOKENS
@@ -827,7 +829,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       const requestBody: ChatRequestBody = {
         port: port || "",
         query:
-          clipboardItems.map((item) => item.text).join("\n") +
+          attachments.map((item) => item.text).join("\n") +
           "\n" +
           userMessageContent,
         chatModel: currentModel,
@@ -1000,7 +1002,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       getModel,
       saveUserMessage,
       messages,
-      clipboardItems,
+      attachments,
       conversation,
       lastMessage,
       error,
@@ -1055,7 +1057,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         await MocksendLLMMessage(
           userQueryForRewrite,
           historyForRewrite,
-          clipboardItems,
+          attachments,
           assistantMessageIdToRewrite // Pass the ID of the assistant message to be "edited"
         );
       } catch (err: any) {
@@ -1071,7 +1073,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     [
       MocksendLLMMessage,
       messages,
-      clipboardItems,
+      attachments,
       getModel,
       conversation,
       lastMessage,
@@ -1095,7 +1097,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         history.pop();
         setMessages(history);
       }
-      await MocksendLLMMessage(mutableInput, history, clipboardItems);
+      await MocksendLLMMessage(mutableInput, history, attachments);
     } catch (error: any) {
       if (typeof error === "string") {
         setError(error);
@@ -1110,7 +1112,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setInput("");
       setStop(true);
     }
-  }, [input, messages, clipboardItems, MocksendLLMMessage]);
+  }, [input, messages, attachments, MocksendLLMMessage]);
   // Handle first render and auto-hide
   const hasExecutedTimeout = useRef(false);
   useEffect(() => {
@@ -1128,21 +1130,23 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       clearTimeout(timer);
     };
   }, [firstRenderRef, setIsFirstRender]);
-  const addClipboardItem = useCallback((text: string | null) => {
-    if (!text) return;
 
-    setClipboardItems((prev) => {
+  const addAttachment = useCallback((attachment: TAttachment) => {
+    if (!attachment) return;
+
+    setAttachments((prev) => {
       // Create new item
 
-      const newItem: TClipBoard = {
-        text: text,
-      };
+      const newItem: TAttachment = attachment;
 
       // Handle case where prev might be null or undefined
       let newItems = [];
       if (prev && prev.length > 0)
         // Add to beginning of array and limit to MAX_CLIPBOARD_ITEMS
-        newItems = [newItem, ...prev.filter((item) => item.text !== text)];
+        newItems = [
+          newItem,
+          ...prev.filter((item) => item.text !== attachment.text),
+        ];
       else {
         newItems = [newItem];
       }
@@ -1152,16 +1156,58 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       return newItems;
     });
   }, []);
-  const removeClipboardItem = useCallback((index: number) => {
-    setClipboardItems((prev) => {
+  const removeAttachment = useCallback((attachmentId: string) => {
+    setAttachments((prev) => {
       const newItems = [...prev];
-      newItems.splice(index, 1);
+      newItems.splice(
+        newItems.findIndex((item) => item.id === attachmentId),
+        1
+      );
       return newItems;
     });
   }, []);
-  const clearAllClipboardItems = useCallback(() => {
-    setClipboardItems([]);
+  const clearAttachments = useCallback(() => {
+    setAttachments([]);
   }, []);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const newFiles = Array.from(event.target.files);
+      const newAttachedFileItems: TAttachment[] = newFiles.map((file) => {
+        const item: TAttachment = {
+          id: `${file.name}-${file.lastModified}-${file.size}-${Math.random()
+            .toString(36)
+            .substring(7)}`,
+          file,
+          type: "file",
+          text: file.name,
+        };
+        if (file.type.startsWith("image/")) {
+          item.previewUrl = URL.createObjectURL(file);
+        }
+        return item;
+      });
+      setAttachments((prevFiles) => {
+        const existingFileIds = new Set(prevFiles.map((f) => f.id));
+        const uniqueNewFiles = newAttachedFileItems.filter(
+          (nf) => !existingFileIds.has(nf.id)
+        );
+        return [...prevFiles, ...uniqueNewFiles];
+      });
+      event.target.value = "";
+    }
+  };
+
+  // const removeFile = (fileIdToRemove: string) => {
+  //   setAttachedFiles((prevFiles) =>
+  //     prevFiles.filter((item) => {
+  //       if (item.id === fileIdToRemove) {
+  //         if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+  //         return false;
+  //       }
+  //       return true;
+  //     })
+  //   );
+  // };
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => {
     return {
@@ -1169,7 +1215,6 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setStop,
       stopRef,
       isFirstRender,
-      clipboardItems,
       searchMode,
       setMessages,
       messages,
@@ -1184,9 +1229,9 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       rewrite,
       setLastMessage,
       setError,
-      clearAllClipboardItems,
-      removeClipboardItem,
-      addClipboardItem,
+      clearAttachments,
+      removeAttachment,
+      addAttachment,
       newChatStarter,
     };
   }, [
@@ -1194,7 +1239,6 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setStop,
     stopRef,
     isFirstRender,
-    clipboardItems,
     searchMode,
     setMessages,
     messages,
@@ -1208,9 +1252,6 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     rewrite,
     setLastMessage,
     setError,
-    clearAllClipboardItems,
-    removeClipboardItem,
-    addClipboardItem,
     newChatStarter,
   ]);
   const inputContextValue = useMemo(() => {
@@ -1219,20 +1260,24 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setInput,
       searchMode,
       setSearchMode,
-      clipboardItems,
-      addClipboardItem,
-      removeClipboardItem,
-      clearAllClipboardItems,
+      attachments,
+      addAttachment,
+      removeAttachment,
+      clearAttachments,
+      handleFileChange,
+      fileInputRef,
     };
   }, [
     input,
     setInput,
     searchMode,
     setSearchMode,
-    clipboardItems,
-    addClipboardItem,
-    removeClipboardItem,
-    clearAllClipboardItems,
+    attachments,
+    addAttachment,
+    removeAttachment,
+    clearAttachments,
+    handleFileChange,
+    fileInputRef,
   ]);
   return (
     <ChatContext.Provider value={contextValue}>

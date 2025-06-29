@@ -1,10 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { X, Clipboard, Plus, Trash2 } from "lucide-react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import {
+  X,
+  Clipboard,
+  Plus,
+  Trash2,
+  ClipboardCheckIcon,
+  XIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { TClipBoard } from "@/types/clipboard";
+import type { TClipBoard } from "@/types/attachment";
 import { ScrollArea, ScrollBar } from "./ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 const MAX_CLIPBOARD_ITEMS = 30;
 
@@ -24,7 +32,7 @@ export function ClipboardIndicator({
   // Use a ref to keep track of the latest clipboardItems
   const clipboardItemsRef = useRef(clipboardItems);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-
+  console.log("clipboardItemsss:", clipboardItems);
   // Update the ref whenever clipboardItems changes
   useEffect(() => {
     clipboardItemsRef.current = clipboardItems;
@@ -77,79 +85,39 @@ export function ClipboardIndicator({
   };
 
   return (
-    <div className="border rounded-md p-2 mb-2 w-full">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Clipboard className="h-4 w-4" />
-          <span>
-            Clipboard ({clipboardItems.length}/{MAX_CLIPBOARD_ITEMS})
-          </span>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 px-2 py-0 rounded-md text-xs flex items-center gap-1"
-            onClick={handlePaste}
-            type="button"
-            title="Paste from clipboard"
-            disabled={clipboardItems.length >= MAX_CLIPBOARD_ITEMS}
-          >
-            <Plus className="h-3 w-3" />
-            <span>Paste</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 py-0 hover:bg-foreground/20 rounded-md text-xs flex items-center gap-1"
-            onClick={clearAllClipboardItems}
-            title="Clear all"
-            disabled={clipboardItems.length === 0}
-          >
-            <Trash2 className="h-3 w-3" />
-            <span>Clear all</span>
-          </Button>
-        </div>
-      </div>
-
-      {statusMessage && (
-        <div className="text-xs mb-2 px-1 text-muted-foreground">
-          {statusMessage}
-        </div>
-      )}
-
-      {clipboardItems.length === 0 ? (
-        <div className="text-xs text-muted-foreground text-center py-3">
-          Your clipboard history is empty. Click "Paste" to add content.
-        </div>
-      ) : (
-        <ScrollArea>
-          <ScrollBar orientation="horizontal"></ScrollBar>
-          <div className="flex w-max space-x-2 py-3">
-            {clipboardItems.map((item, index) => (
-              <div
-                key={index}
-                className="flex-shrink-0 flex items-center justify-between text-xs py-1 px-2 rounded-md bg-accent/50 hover:bg-accent/70 max-w-[200px] min-w-[100px]"
-              >
-                <div className="truncate flex-1">
-                  {item.text && item.text.length > 25
-                    ? `${item.text.slice(0, 25)}...`
-                    : item.text}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 p-0 hover:bg-foreground/20 rounded-full ml-2 flex-shrink-0"
-                  onClick={() => removeClipboardItem(index)}
-                >
-                  <X className="h-3 w-3" />
-                  <span className="sr-only">Remove item</span>
-                </Button>
-              </div>
-            ))}
+    <Fragment>
+      {clipboardItems.map((item, index) => (
+        <div
+          key={index}
+          className={cn(
+            "relative group w-20 h-fit flex-shrink-0 p-2 rounded-lg border",
+            "flex flex-col items-center justify-between",
+            "bg-card border-border text-card-foreground"
+          )}
+        >
+          <div className="w-10 h-10 flex items-center justify-center mb-1 overflow-hidden rounded-md ">
+            <ClipboardCheckIcon className="w-10 h-10 text-muted-foreground" />
           </div>
-        </ScrollArea>
-      )}
-    </div>
+          <div className="w-full text-center">
+            <p className="text-xs truncate w-full" title={item.text}>
+              {item.text}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity",
+              "hover:bg-destructive/90"
+            )}
+            onClick={() => removeClipboardItem(index)}
+            aria-label={`Remove ${item.text}`}
+          >
+            <XIcon className="h-3 w-3" />
+          </Button>
+        </div>
+      ))}
+    </Fragment>
   );
 }

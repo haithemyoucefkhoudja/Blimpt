@@ -164,17 +164,28 @@ export function ConversationList() {
                     >
                       <MessageSquare className="mr-2 h-4 w-4" />
                       <div className="flex flex-col items-start overflow-x-hidden">
-                        <span className="truncate w-full">
+                        <span className="truncate w-full text-left">
                           {conversationItem.title}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(
-                            conversationItem.timestamp
-                          ).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(
+                              conversationItem.timestamp
+                            ).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(
+                              conversationItem.timestamp
+                            ).toLocaleDateString([], {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </div>
                       </div>
                     </Button>
                   ))}

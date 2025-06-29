@@ -1,5 +1,5 @@
 import { Document } from "langchain/document";
-import { TClipBoard } from "./clipboard";
+import { TAttachment } from "./attachment";
 export type Message = {
   suggestions?: any;
   id: string;
@@ -9,7 +9,7 @@ export type Message = {
   sources?: Document[];
   timestamp: string;
   conversation_id?: number;
-  clipboardItems?: TClipBoard[];
+  attachments?: TAttachment[];
   isLoading?: boolean;
 };
 export type StoreMessageResponse = {
