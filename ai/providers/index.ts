@@ -78,23 +78,6 @@ export const getChatModel = async (
     throw new Error("Error initializing chat model: " + error.message);
   }
 };
-export const getAvailableChatModelProviders = async (
-  ApiKey: string,
-  model: string
-): Promise<AvailableModels> => {
-  const models: AvailableModels = {};
-
-  for (const provider in chatModelProviders) {
-    const providerModels = await chatModelProviders[provider](ApiKey, model);
-
-    if (Object.keys(providerModels).length > 0) {
-      models[provider] = providerModels;
-    }
-  }
-
-  models["custom_openai"] = {} as BaseChatModel;
-  return models;
-};
 export const getAvailableEmbeddingModelProviders =
   async (): Promise<EmbeddingModelMap> => {
     const models: EmbeddingModelMap = {};

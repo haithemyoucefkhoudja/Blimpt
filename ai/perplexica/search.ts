@@ -11,6 +11,7 @@ import { Embeddings } from "@langchain/core/embeddings";
 import EventEmitter from "eventemitter3";
 import { Document } from "langchain/document";
 import { DeepChatOpenAI } from "../providers/openai";
+import { TAttachment } from "@/types/attachment";
 
 // Add this utility function to convert EventEmitter to AsyncIterator
 export function on(emitter: EventEmitter, event: string) {
@@ -52,7 +53,7 @@ async function* streamSearchResponse(
   searchHandler: MetaSearchAgentType,
   optimizationMode: "speed" | "balanced",
   port: string,
-  files: string[] = []
+  attachments: TAttachment[] = []
 ) {
   const emitter = await searchHandler.searchAndAnswer(
     query,
@@ -61,7 +62,7 @@ async function* streamSearchResponse(
     embeddings,
     optimizationMode,
     port,
-    files
+    attachments
   );
 
   let message = "";
@@ -103,7 +104,8 @@ export interface ChatRequestBody {
   chatModel: chatModel;
   query: string;
   port: string;
-  history: Array<[string, string]>;
+  history: Array<[string, any]>;
+  attachments?: TAttachment[];
 }
 
 async function initializeModels(body: ChatRequestBody) {
@@ -195,7 +197,8 @@ export async function* handleChatRequest(body: ChatRequestBody) {
       embeddings,
       searchHandler,
       body.optimizationMode,
-      body.port
+      body.port,
+      body.attachments
     );
   } catch (error: any) {
     throw error;

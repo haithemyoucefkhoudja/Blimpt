@@ -22,6 +22,7 @@ import formatChatHistoryAsString from "@/utils/formatHistory";
 import { EventEmitter } from "eventemitter3";
 import { StreamEvent } from "@langchain/core/tracers/log_stream";
 import { IterableReadableStream } from "@langchain/core/utils/stream";
+import { TAttachment } from "@/types/attachment";
 
 export interface MetaSearchAgentType {
   searchAndAnswer: (
@@ -31,7 +32,7 @@ export interface MetaSearchAgentType {
     embeddings: Embeddings | undefined,
     optimizationMode: "speed" | "balanced" | "quality",
     port: string,
-    fileIds: string[]
+    attachments: TAttachment[]
   ) => Promise<EventEmitter>;
 }
 
@@ -234,7 +235,7 @@ class MetaSearchAgent implements MetaSearchAgentType {
   private async createAnsweringChain(
     llm: BaseChatModel,
     port: string,
-    fileIds: string[],
+    attachments: TAttachment[],
     embeddings: Embeddings | undefined,
     optimizationMode: "speed" | "balanced" | "quality"
   ) {
@@ -242,6 +243,8 @@ class MetaSearchAgent implements MetaSearchAgentType {
       RunnableMap.from({
         query: (input: BasicChainInput) => input.query,
         chat_history: (input: BasicChainInput) => input.chat_history,
+        attachments: (input: BasicChainInput) =>
+          (input as any).attachments || [],
         date: () => new Date().toISOString(),
         context: RunnableLambda.from(async (input: BasicChainInput) => {
           const processedHistory = formatChatHistoryAsString(
@@ -266,10 +269,9 @@ class MetaSearchAgent implements MetaSearchAgentType {
             docs = searchRetrieverResult.docs;
           }
 
-          // const sortedDocs = await this.rerankDocs(
           //   query,
           //   docs ?? [],
-          //   fileIds,
+          //   attachments,
           //   embeddings,
           //   optimizationMode,
           // );
@@ -284,7 +286,35 @@ class MetaSearchAgent implements MetaSearchAgentType {
       ChatPromptTemplate.fromMessages([
         ["system", this.config.responsePrompt],
         new MessagesPlaceholder("chat_history"),
-        ["user", "{query}"],
+        [
+          "user",
+          [
+            { type: "text", text: "{query}" },
+            ...((attachments as TAttachment[]) || []).map((item) => {
+              switch (item.type) {
+                case "image":
+                  return {
+                    type: "image",
+                    source_type: "base64",
+                    data: item.base64,
+                    mime_type: item.file.type,
+                  };
+                case "file":
+                  return {
+                    type: "file",
+                    source_type: "base64",
+                    data: item.base64,
+                    mime_type: item.file.type,
+                  };
+                default:
+                  return {
+                    type: "text",
+                    text: item.text,
+                  };
+              }
+            }),
+          ],
+        ],
       ]),
       llm,
       this.strParser,
@@ -414,14 +444,14 @@ class MetaSearchAgent implements MetaSearchAgentType {
     embeddings: Embeddings | undefined,
     optimizationMode: "speed" | "balanced" | "quality",
     port: string,
-    fileIds: string[]
+    attachments: TAttachment[]
   ) {
     const emitter = new EventEmitter();
 
     const answeringChain = await this.createAnsweringChain(
       llm,
       port,
-      fileIds,
+      attachments,
       embeddings,
       optimizationMode
     );

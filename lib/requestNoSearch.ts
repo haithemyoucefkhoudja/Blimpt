@@ -1,6 +1,7 @@
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { ChatOpenAI } from "@langchain/openai";
 import { getChatModel } from "../ai";
+import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import { ChatRequestBody } from "../ai";
 
 export async function* handleChatRequestNoSearch(body: ChatRequestBody) {
@@ -47,8 +48,41 @@ export async function* handleChatRequestNoSearch(body: ChatRequestBody) {
     }
   }
   try {
-    // Initiate the chat stream
-    const stream = await llm.stream([...body.history, ["human", body.query]]);
+    const history = body.history.map((msg) => {
+      if (msg[0] === "human") {
+        return new HumanMessage({ content: msg[1] });
+      } else {
+        return new AIMessage({ content: msg[1] });
+      }
+    });
+    console.log("func:", llm);
+
+    const query = new HumanMessage({
+      content: [
+        { type: "text", text: body.query },
+        ...(body.attachments || []).map((item) => {
+          switch (item.type) {
+            case "image":
+              return {
+                type: "image_url",
+                image_url: `data:${item.file.type};base64,${item.base64}`,
+              };
+            case "text":
+              return {
+                type: "text",
+                text: item.text,
+              };
+            default:
+              return {
+                type: "text",
+                text: "Unsupported attachment type",
+              };
+          }
+        }),
+      ],
+    });
+
+    const stream = await llm.stream([...history, query]);
     if (stream.locked) {
       yield {
         type: "error",
@@ -88,6 +122,5 @@ export async function* handleChatRequestNoSearch(body: ChatRequestBody) {
       type: "error",
       data: "Error streaming response: " + error.message,
     };
-    return;
   }
 }

@@ -70,6 +70,21 @@ interface InputContextValue {
   fileInputRef: React.RefObject<HTMLInputElement>;
 }
 const MAX_RETRIES = 3;
+
+const readFileAsBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result.split(",")[1]);
+      } else {
+        reject(new Error("Failed to read file as base64"));
+      }
+    };
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
+};
 // Helper functions moved outside component to avoid recreation on each render
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
 const InputContext = createContext<InputContextValue | undefined>(undefined);
@@ -451,14 +466,19 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       const trimmedHistory = await trimHistory(
         historyForLLM.map((msg) => ({
           role: msg.role as "user" | "assistant",
-          content:
-            msg.attachments?.map((item) => item.text).join("\n") +
-            "\n" +
-            msg.content,
+          content: [
+            {
+              type: "text",
+              text: msg.content,
+            },
+            ...(msg.attachments?.map((item) => ({
+              type: "image_url",
+              image_url: `data:image/jpeg;base64,${item.base64}`,
+            })) || []),
+          ],
         })),
-        attachments.map((item) => item.text).join("\n") +
-          "\n" +
-          userMessageContent, // Use the version with context
+        userMessageContent, // Use the version with context
+        attachments,
         config.MAX_TOKENS
       );
       console.log("trimmedHistory:", trimmedHistory);
@@ -509,17 +529,12 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       // 5. Make API Call and Stream Response
       const requestBody: ChatRequestBody = {
         port: port || "",
-        query:
-          attachments.map((item) => item.text).join("\n") +
-          "\n" +
-          userMessageContent,
+        query: userMessageContent,
         chatModel: currentModel,
-        history: trimmedHistory.map((msg) => [
-          msg.role === "user" ? "human" : "ai",
-          msg.content,
-        ]),
+        history: trimmedHistory.map((msg) => [msg.role, msg.content]),
         focusMode: searchMode,
         optimizationMode: "balanced",
+        attachments: attachments,
       };
 
       // const chatGenerator =
@@ -771,14 +786,37 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       const trimmedHistory = await trimHistory(
         historyForLLM.map((msg) => ({
           role: msg.role as "user" | "assistant",
-          content:
-            msg.attachments?.map((item) => item.text).join("\n") +
-            "\n" +
-            msg.content,
+          content: [
+            {
+              type: "text",
+              text: msg.content,
+            },
+            ...(msg.attachments?.map((item) => {
+              console.log(item.base64);
+              switch (item.type) {
+                case "image":
+                  return {
+                    type: "image_url",
+                    image_url: {
+                      url: `data:image/jpeg;base64,${item.base64}`,
+                    },
+                  };
+                case "text":
+                  return {
+                    type: "text",
+                    text: item.text,
+                  };
+                default:
+                  return {
+                    type: "text",
+                    text: "Unsupported attachment type",
+                  };
+              }
+            }) || []),
+          ],
         })),
-        attachments.map((item) => item.text).join("\n") +
-          "\n" +
-          userMessageContent, // Use the version with context
+        userMessageContent, // Use the version with context
+        attachments,
         config.MAX_TOKENS
       );
 
@@ -828,17 +866,12 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       // 5. Make API Call and Stream Response
       const requestBody: ChatRequestBody = {
         port: port || "",
-        query:
-          attachments.map((item) => item.text).join("\n") +
-          "\n" +
-          userMessageContent,
+        query: userMessageContent,
         chatModel: currentModel,
-        history: trimmedHistory.map((msg) => [
-          msg.role === "user" ? "human" : "ai",
-          msg.content,
-        ]),
+        history: trimmedHistory.map((msg) => [msg.role, msg.content]),
         focusMode: searchMode,
         optimizationMode: "balanced",
+        attachments: attachments,
       };
 
       const chatGenerator =
@@ -1054,7 +1087,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
       try {
         // Call sendLLMMessage in "edit" mode
-        await MocksendLLMMessage(
+        await sendLLMMessage(
           userQueryForRewrite,
           historyForRewrite,
           attachments,
@@ -1071,7 +1104,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       // No finally needed here if sendLLMMessage handles its own finally for loading/stop
     },
     [
-      MocksendLLMMessage,
+      sendLLMMessage,
       messages,
       attachments,
       getModel,
@@ -1097,7 +1130,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         history.pop();
         setMessages(history);
       }
-      await MocksendLLMMessage(mutableInput, history, attachments);
+      await sendLLMMessage(mutableInput, history, attachments);
     } catch (error: any) {
       if (typeof error === "string") {
         setError(error);
@@ -1112,7 +1145,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setInput("");
       setStop(true);
     }
-  }, [input, messages, attachments, MocksendLLMMessage]);
+  }, [input, messages, attachments, sendLLMMessage]);
   // Handle first render and auto-hide
   const hasExecutedTimeout = useRef(false);
   useEffect(() => {
@@ -1135,17 +1168,22 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     if (!attachment) return;
 
     setAttachments((prev) => {
-      // Create new item
-
       const newItem: TAttachment = attachment;
 
-      // Handle case where prev might be null or undefined
+      if (attachment.type.startsWith("image") || attachment.type === "image") {
+        if (attachment.file) {
+          newItem.previewUrl = URL.createObjectURL(attachment.file);
+          readFileAsBase64(attachment.file).then((base64) => {
+            newItem.base64 = base64;
+          });
+        }
+      }
+
       let newItems = [];
       if (prev && prev.length > 0)
-        // Add to beginning of array and limit to MAX_CLIPBOARD_ITEMS
         newItems = [
           newItem,
-          ...prev.filter((item) => item.text !== attachment.text),
+          ...prev.filter((item) => item.id !== attachment.id),
         ];
       else {
         newItems = [newItem];
@@ -1178,11 +1216,14 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             .toString(36)
             .substring(7)}`,
           file,
-          type: "file",
+          type: file.type.startsWith("image/") ? "image" : "file",
           text: file.name,
         };
-        if (file.type.startsWith("image/")) {
+        if (item.type === "image") {
           item.previewUrl = URL.createObjectURL(file);
+          readFileAsBase64(file).then((base64) => {
+            item.base64 = base64;
+          });
         }
         return item;
       });
@@ -1219,7 +1260,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setMessages,
       messages,
       lastMessage,
-      sendMessage: MocksendLLMMessage,
+      sendMessage: sendLLMMessage,
       isLoading,
       error,
       input,
@@ -1243,7 +1284,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setMessages,
     messages,
     lastMessage,
-    MocksendLLMMessage,
+    sendLLMMessage,
     isLoading,
     error,
     input,

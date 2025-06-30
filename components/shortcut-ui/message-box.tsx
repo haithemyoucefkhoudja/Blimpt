@@ -2,13 +2,21 @@
 
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/Message";
-import { BookCopy, Layers3, Plus, Share, UserIcon } from "lucide-react";
+import {
+  BookCopy,
+  FileIcon,
+  Layers3,
+  Plus,
+  Share,
+  UserIcon,
+} from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
 import { MarkdownMessage } from "@/components/ui/react-markdown";
 // import MessageSources from "./message-sources";
 import { Copy } from "../Copy";
 import Rewrite from "../Rewrite";
 import MessageSources from "./message-sources";
+import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 
 const MessageBox = memo(function MessageBox({
   message,
@@ -63,12 +71,60 @@ const MessageBox = memo(function MessageBox({
                 {message.id}
               </span> */}
             </div>
+
             <h3 className="text-black dark:text-white font-medium text-xl">
               You:
             </h3>
             <span className="text-black/60 dark:text-white/60 text-[10px] mt-0.5">
               {message.id}
             </span>
+          </div>
+          <div className=" flex ">
+            {/* <div className="flex space-x-3 overflow-x-auto scrollbar-thin scrollbar-thumb-border hover:scrollbar-thumb-accent pb-2">
+             */}
+            <ScrollArea
+              className={cn(message.attachments.length > 0 && "py-2")}
+            >
+              <ScrollBar orientation="horizontal" />
+              <div
+                className={cn(
+                  "flex space-x-3",
+                  message.attachments.length > 0 && ""
+                )}
+              >
+                {message.attachments.length > 0 &&
+                  message.attachments.map((item) => (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "relative group w-20 h-fit flex-shrink-0 p-2 rounded-lg border",
+                        "flex flex-col items-center justify-between",
+                        "bg-card border-border text-card-foreground"
+                      )}
+                    >
+                      <div className="w-10 h-10 flex items-center justify-center mb-1 overflow-hidden rounded-md ">
+                        {item.previewUrl ? (
+                          <img
+                            src={item.previewUrl}
+                            alt={item.file?.name}
+                            className="w-full h-full object-cover cursor-pointer transition-transform duration-200 group-hover:scale-105"
+                          />
+                        ) : (
+                          <FileIcon className="w-10 h-10 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="w-full text-center">
+                        <p
+                          className="text-xs truncate w-full"
+                          title={item.text}
+                        >
+                          {item.text}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </ScrollArea>
           </div>
           <div
             className={cn("w-full", messageIndex === 0 ? "pt-0" : "py-2")}

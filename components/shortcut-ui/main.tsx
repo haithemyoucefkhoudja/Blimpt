@@ -19,13 +19,15 @@ import { useChat } from "@/providers/chat-provider";
 import LoveIndicator from "./LoveIndicator";
 import NewChatIndicator from "./new-chat-indicator";
 import { cn } from "@/lib/utils";
+import { ErrorMessage } from "./error-message";
 
 // Define your window types for better type safety
 type WindowKey = "chat" | "commands" | "list" | "settings" | "history";
 
 const MainComponent = memo(function MainComponent() {
   const { ActiveWindow, setActiveWindow } = useAppResize();
-  const { setLastMessage, setError, conversation, isLoading } = useChat(); // Destructure all props needed by child components here
+  const { setLastMessage, setError, conversation, isLoading, error } =
+    useChat(); // Destructure all props needed by child components here
 
   const closeWindowOnChatInactive = () => {
     setLastMessage(null);
@@ -101,13 +103,13 @@ const MainComponent = memo(function MainComponent() {
           </h3>
           <NewChatIndicator />
         </div>
+        {error && <ErrorMessage message={error} type="list" />}
         {/* Container for the sliding windows */}
         <div className="flex-1 relative h-full">
           {" "}
           {/* Ensures this container takes up remaining space and is a positioning context */}
           <div className={cn("w-full  h-full")}>
-              {windowDefinitions.find((w) => w.key === ActiveWindow)?.Component()}
-            
+            {windowDefinitions.find((w) => w.key === ActiveWindow)?.Component()}
           </div>
         </div>
       </div>

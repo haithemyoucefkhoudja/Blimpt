@@ -39,12 +39,35 @@ export const ChatInput = memo(function ChatInput() {
     }
     if (e.ctrlKey && e.key === "v") {
       e.preventDefault();
-      const text = await navigator.clipboard.readText();
-      addAttachment({
-        id: `${text}-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-        text,
-        type: "text",
-      });
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        console.log("item.types:", item.types);
+        if (item.types.some((type) => type.includes("image"))) {
+          const type = item.types.find((type) => type.includes("image"));
+          const blob = await item.getType(type);
+          addAttachment({
+            id: `clipboard-image-${Date.now()}`,
+            file: new File([blob], `clipboard-image.${type.split("/")[1]}`, {
+              type: `image/${type.split("/")[1]}`,
+            }),
+            type: "image",
+            previewUrl: URL.createObjectURL(blob),
+          });
+          break;
+        }
+        if (item.types.some((type) => type.includes("text/plain"))) {
+          const type = item.types.find((type) => type.includes("text/plain"));
+          const text = await (await item.getType(type)).text();
+          addAttachment({
+            id: `${text}-${Date.now()}-${Math.random()
+              .toString(36)
+              .substring(7)}`,
+            text,
+            type: "text",
+          });
+          break;
+        }
+      }
     }
   };
 

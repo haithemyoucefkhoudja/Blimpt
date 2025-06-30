@@ -16,16 +16,16 @@ dependencies:
     version: 0.2.18(openai@4.104.0)
   '@langchain/community':
     specifier: ^0.2.33
-    version: 0.2.33(@langchain/anthropic@0.2.18)(@langchain/google-genai@0.0.23)(@xenova/transformers@2.17.2)(axios@1.9.0)(better-sqlite3@11.10.0)(html-to-text@9.0.5)(openai@4.104.0)(pdf-parse@1.1.1)
+    version: 0.2.33(@langchain/anthropic@0.2.18)(@langchain/google-genai@0.2.14)(@xenova/transformers@2.17.2)(axios@1.9.0)(better-sqlite3@11.10.0)(html-to-text@9.0.5)(openai@4.104.0)(pdf-parse@1.1.1)
   '@langchain/core':
-    specifier: ^0.3.40
-    version: 0.3.58(openai@4.104.0)
+    specifier: ^0.3.61
+    version: 0.3.61(openai@4.104.0)
   '@langchain/google-genai':
-    specifier: ^0.0.23
-    version: 0.0.23(openai@4.104.0)(zod@3.25.61)
+    specifier: ^0.2.14
+    version: 0.2.14(@langchain/core@0.3.61)
   '@langchain/openai':
     specifier: ^0.4.4
-    version: 0.4.9(@langchain/core@0.3.58)
+    version: 0.4.9(@langchain/core@0.3.61)
   '@radix-ui/react-avatar':
     specifier: ^1.1.2
     version: 1.1.10(@types/react-dom@18.3.7)(@types/react@18.3.23)(react-dom@18.3.1)(react@18.3.1)
@@ -139,7 +139,7 @@ dependencies:
     version: 9.0.5
   langchain:
     specifier: ^0.3.19
-    version: 0.3.27(@langchain/anthropic@0.2.18)(@langchain/core@0.3.58)(@langchain/google-genai@0.0.23)(axios@1.9.0)(openai@4.104.0)
+    version: 0.3.27(@langchain/anthropic@0.2.18)(@langchain/core@0.3.61)(@langchain/google-genai@0.2.14)(axios@1.9.0)(openai@4.104.0)
   llm-tokenizer:
     specifier: ^1.0.2
     version: 1.0.2
@@ -738,8 +738,8 @@ packages:
     resolution: {integrity: sha512-MDWhGtE+eHw5JW7lq4qhc5yRLS11ERl1c7Z6Xd0a58DozHES6EnNNwUWbMiG4J9Cgj053Bhk8zvlhFYKVhULwg==}
     dev: false
 
-  /@google/generative-ai@0.7.1:
-    resolution: {integrity: sha512-WTjMLLYL/xfA5BW6xAycRPiAX7FNHKAxrid/ayqC1QMam0KAK0NbMeS9Lubw80gVg5xFMLE+H7pw4wdNzTOlxw==}
+  /@google/generative-ai@0.24.1:
+    resolution: {integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==}
     engines: {node: '>=18.0.0'}
     dev: false
 
@@ -803,7 +803,7 @@ packages:
       - openai
     dev: false
 
-  /@langchain/community@0.2.33(@langchain/anthropic@0.2.18)(@langchain/google-genai@0.0.23)(@xenova/transformers@2.17.2)(axios@1.9.0)(better-sqlite3@11.10.0)(html-to-text@9.0.5)(openai@4.104.0)(pdf-parse@1.1.1):
+  /@langchain/community@0.2.33(@langchain/anthropic@0.2.18)(@langchain/google-genai@0.2.14)(@xenova/transformers@2.17.2)(axios@1.9.0)(better-sqlite3@11.10.0)(html-to-text@9.0.5)(openai@4.104.0)(pdf-parse@1.1.1):
     resolution: {integrity: sha512-YsytROnBYoPqtUcV2In+afyLACzxwFrYRn7EBKYL7XWl3XNwrT85U1+nLM5b+MOjXvg9YfJSjrs1Tlbfy4st8g==}
     engines: {node: '>=18'}
     peerDependencies:
@@ -1181,7 +1181,7 @@ packages:
       flat: 5.0.2
       html-to-text: 9.0.5
       js-yaml: 4.1.0
-      langchain: 0.2.20(@langchain/anthropic@0.2.18)(@langchain/google-genai@0.0.23)(axios@1.9.0)(html-to-text@9.0.5)(openai@4.104.0)(pdf-parse@1.1.1)
+      langchain: 0.2.20(@langchain/anthropic@0.2.18)(@langchain/google-genai@0.2.14)(axios@1.9.0)(html-to-text@9.0.5)(openai@4.104.0)(pdf-parse@1.1.1)
       langsmith: 0.1.68(openai@4.104.0)
       pdf-parse: 1.1.1
       uuid: 10.0.0
@@ -1225,8 +1225,8 @@ packages:
       - openai
     dev: false
 
-  /@langchain/core@0.3.58(openai@4.104.0):
-    resolution: {integrity: sha512-HLkOtVofgBHefaUae/+2fLNkpMLzEjHSavTmUF0YC7bDa5NPIZGlP80CGrSFXAeJ+WCPd8rIK8K/p6AW94inUQ==}
+  /@langchain/core@0.3.61(openai@4.104.0):
+    resolution: {integrity: sha512-4O7fw5SXNSE+uBnathLQrhm3t+7dZGagt/5kt37A+pXw0AkudxEBvveg73sSnpBd9SIz3/Vc7F4k8rCKXGbEDA==}
     engines: {node: '>=18'}
     dependencies:
       '@cfworker/json-schema': 4.1.1
@@ -1234,7 +1234,7 @@ packages:
       camelcase: 6.3.0
       decamelize: 1.2.0
       js-tiktoken: 1.0.20
-      langsmith: 0.3.31(openai@4.104.0)
+      langsmith: 0.3.34(openai@4.104.0)
       mustache: 4.2.0
       p-queue: 6.6.2
       p-retry: 4.6.2
@@ -1245,16 +1245,15 @@ packages:
       - openai
     dev: false
 
-  /@langchain/google-genai@0.0.23(openai@4.104.0)(zod@3.25.61):
-    resolution: {integrity: sha512-MTSCJEoKsfU1inz0PWvAjITdNFM4s41uvBCwLpcgx3jWJIEisczFD82x86ahYqJlb2fD6tohYSaCH/4tKAdkXA==}
+  /@langchain/google-genai@0.2.14(@langchain/core@0.3.61):
+    resolution: {integrity: sha512-gKe/T2LNh8wSSMJOaFmYd8cwQnDSXKtVtC6a7CFoq5nWuh0bKzhItM/7bue1aMN8mlKfB2G1HCwxhaZoSpS/DA==}
     engines: {node: '>=18'}
+    peerDependencies:
+      '@langchain/core': '>=0.3.58 <0.4.0'
     dependencies:
-      '@google/generative-ai': 0.7.1
-      '@langchain/core': 0.2.36(openai@4.104.0)
-      zod-to-json-schema: 3.24.5(zod@3.25.61)
-    transitivePeerDependencies:
-      - openai
-      - zod
+      '@google/generative-ai': 0.24.1
+      '@langchain/core': 0.3.61(openai@4.104.0)
+      uuid: 11.1.0
     dev: false
 
   /@langchain/openai@0.2.11:
@@ -1271,13 +1270,13 @@ packages:
       - ws
     dev: false
 
-  /@langchain/openai@0.4.9(@langchain/core@0.3.58):
+  /@langchain/openai@0.4.9(@langchain/core@0.3.61):
     resolution: {integrity: sha512-NAsaionRHNdqaMjVLPkFCyjUDze+OqRHghA1Cn4fPoAafz+FXcl9c7LlEl9Xo0FH6/8yiCl7Rw2t780C/SBVxQ==}
     engines: {node: '>=18'}
     peerDependencies:
       '@langchain/core': '>=0.3.39 <0.4.0'
     dependencies:
-      '@langchain/core': 0.3.58(openai@4.104.0)
+      '@langchain/core': 0.3.61(openai@4.104.0)
       js-tiktoken: 1.0.20
       openai: 4.104.0(zod@3.25.61)
       zod: 3.25.61
@@ -1297,13 +1296,13 @@ packages:
       - openai
     dev: false
 
-  /@langchain/textsplitters@0.1.0(@langchain/core@0.3.58):
+  /@langchain/textsplitters@0.1.0(@langchain/core@0.3.61):
     resolution: {integrity: sha512-djI4uw9rlkAb5iMhtLED+xJebDdAG935AdP4eRTB02R7OB/act55Bj9wsskhZsvuyQRpO4O1wQOp85s6T6GWmw==}
     engines: {node: '>=18'}
     peerDependencies:
       '@langchain/core': '>=0.2.21 <0.4.0'
     dependencies:
-      '@langchain/core': 0.3.58(openai@4.104.0)
+      '@langchain/core': 0.3.61(openai@4.104.0)
       js-tiktoken: 1.0.20
     dev: false
 
@@ -6611,7 +6610,7 @@ packages:
     resolution: {integrity: sha512-Xq9nH7KlWZmXAtodXDDRE7vs6DU1gTU8zYDHDiWLSip45Egwq3plLHzPn27NgvzL2r1LMPC1vdqh98sQxtqj4A==}
     dev: false
 
-  /langchain@0.2.20(@langchain/anthropic@0.2.18)(@langchain/google-genai@0.0.23)(axios@1.9.0)(html-to-text@9.0.5)(openai@4.104.0)(pdf-parse@1.1.1):
+  /langchain@0.2.20(@langchain/anthropic@0.2.18)(@langchain/google-genai@0.2.14)(axios@1.9.0)(html-to-text@9.0.5)(openai@4.104.0)(pdf-parse@1.1.1):
     resolution: {integrity: sha512-tbels6Rr524iMM3VOQ4aTGnEOOjAA1BQuBR8u/8gJ2yT48lMtIQRAN32Y4KVjKK+hEWxHHlmLBrtgLpTphFjNA==}
     engines: {node: '>=18'}
     peerDependencies:
@@ -6793,7 +6792,7 @@ packages:
     dependencies:
       '@langchain/anthropic': 0.2.18(openai@4.104.0)
       '@langchain/core': 0.2.36(openai@4.104.0)
-      '@langchain/google-genai': 0.0.23(openai@4.104.0)(zod@3.25.61)
+      '@langchain/google-genai': 0.2.14(@langchain/core@0.3.61)
       '@langchain/openai': 0.2.11
       '@langchain/textsplitters': 0.0.3(openai@4.104.0)
       axios: 1.9.0
@@ -6815,7 +6814,7 @@ packages:
       - openai
     dev: false
 
-  /langchain@0.3.27(@langchain/anthropic@0.2.18)(@langchain/core@0.3.58)(@langchain/google-genai@0.0.23)(axios@1.9.0)(openai@4.104.0):
+  /langchain@0.3.27(@langchain/anthropic@0.2.18)(@langchain/core@0.3.61)(@langchain/google-genai@0.2.14)(axios@1.9.0)(openai@4.104.0):
     resolution: {integrity: sha512-XfOuXetMSpkS11Mt6YJkDmvuSGTMPUsks5DJz4RCZ3y2dcbLkOe5kecjx2SWVJYqQIqcMMwsjsve3/ZjnRe7rQ==}
     engines: {node: '>=18'}
     peerDependencies:
@@ -6874,10 +6873,10 @@ packages:
         optional: true
     dependencies:
       '@langchain/anthropic': 0.2.18(openai@4.104.0)
-      '@langchain/core': 0.3.58(openai@4.104.0)
-      '@langchain/google-genai': 0.0.23(openai@4.104.0)(zod@3.25.61)
-      '@langchain/openai': 0.4.9(@langchain/core@0.3.58)
-      '@langchain/textsplitters': 0.1.0(@langchain/core@0.3.58)
+      '@langchain/core': 0.3.61(openai@4.104.0)
+      '@langchain/google-genai': 0.2.14(@langchain/core@0.3.61)
+      '@langchain/openai': 0.4.9(@langchain/core@0.3.61)
+      '@langchain/textsplitters': 0.1.0(@langchain/core@0.3.61)
       axios: 1.9.0
       js-tiktoken: 1.0.20
       js-yaml: 4.1.0
@@ -6914,6 +6913,24 @@ packages:
 
   /langsmith@0.3.31(openai@4.104.0):
     resolution: {integrity: sha512-9lwuLZuN3tXFYQ6eMg0rmbBw7oxQo4bu1NYeylbjz27bOdG1XB9XNoxaiIArkK4ciLdOIOhPMBXP4bkvZOgHRw==}
+    peerDependencies:
+      openai: '*'
+    peerDependenciesMeta:
+      openai:
+        optional: true
+    dependencies:
+      '@types/uuid': 10.0.0
+      chalk: 4.1.2
+      console-table-printer: 2.14.3
+      openai: 4.104.0(zod@3.25.61)
+      p-queue: 6.6.2
+      p-retry: 4.6.2
+      semver: 7.7.2
+      uuid: 10.0.0
+    dev: false
+
+  /langsmith@0.3.34(openai@4.104.0):
+    resolution: {integrity: sha512-rxYuuypqaSzIuNjZMTsCVAgG0cYdI516dwuKn58bu4YuBRlLaLeNlHewRyoqP9lrEAlpkekCV9fUwwZ7lO8f2g==}
     peerDependencies:
       openai: '*'
     peerDependenciesMeta:

@@ -8,8 +8,7 @@ import { useChat } from "@/providers/chat-provider";
 export const MessageDisplay = memo(function MessageDisplay() {
   const { ActiveWindow } = useAppResize();
 
-  const { lastMessage, messages, isLoading, setInput, error, rewrite } =
-    useChat();
+  const { lastMessage, messages, isLoading, error, rewrite } = useChat();
 
   if (ActiveWindow !== "chat") return null;
   if (!lastMessage && !error) return null;
@@ -27,8 +26,6 @@ export const MessageDisplay = memo(function MessageDisplay() {
                   rewrite={rewrite}
                   message={lastMessage}
                   messageIndex={messages.length - 1}
-                  update={isLoading}
-                  sendMessage={setInput}
                 />
               </div>
             )}

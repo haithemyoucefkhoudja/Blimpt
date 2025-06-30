@@ -7,9 +7,12 @@ export const loadGeminiChatModels = async (
   try {
     if (!geminiApiKey) return {};
     return new ChatGoogleGenerativeAI({
-      modelName: model,
+      model,
       temperature: 0.7,
       apiKey: geminiApiKey,
+      metadata: {
+        isMultimodal: true,
+      },
     });
   } catch (err) {
     console.error(`Error loading Gemini models: ${err}`);
