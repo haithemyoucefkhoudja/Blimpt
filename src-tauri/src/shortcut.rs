@@ -21,13 +21,13 @@ pub const COCO_SCREENSHOT_SHORTCUT: &str = "coco_screenshot_shortcut";
 #[cfg(target_os = "macos")]
 const DEFAULT_SHORTCUT: &str = "command+shift+Y";
 #[cfg(target_os = "macos")]
-const DEFAULT_SCREENSHOT_SHORTCUT: &str = "command+shift+U";
+const DEFAULT_SCREENSHOT_SHORTCUT: &str = "command+shift+S";
 
 /// Default shortcut for Windows and Linux
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 const DEFAULT_SHORTCUT: &str = "ctrl+shift+Y";
 #[cfg(any(target_os = "windows", target_os = "linux"))]
-const DEFAULT_SCREENSHOT_SHORTCUT: &str = "ctrl+shift+U";
+const DEFAULT_SCREENSHOT_SHORTCUT: &str = "ctrl+shift+S";
 
 /// Set shortcut during application startup
 pub fn enable_shortcut(app: &App) {
@@ -36,7 +36,7 @@ pub fn enable_shortcut(app: &App) {
         .expect("Creating the store should not fail");
 
     // Main shortcut
-    if let Some(stored_shortcut) = store.get(COCO_GLOBAL_SHORTCUT) {
+    let main_shortcut = if let Some(stored_shortcut) = store.get(COCO_GLOBAL_SHORTCUT) {
         let stored_shortcut_str = match stored_shortcut {
             JsonValue::String(str) => str,
             unexpected_type => panic!(
@@ -44,23 +44,21 @@ pub fn enable_shortcut(app: &App) {
                 unexpected_type
             ),
         };
-        let stored_shortcut = stored_shortcut_str
+        stored_shortcut_str
             .parse::<Shortcut>()
-            .expect("Stored shortcut string should be valid");
-        _register_shortcut_upon_start(app, stored_shortcut, "main");
+            .expect("Stored shortcut string should be valid")
     } else {
         store.set(
             COCO_GLOBAL_SHORTCUT,
             JsonValue::String(DEFAULT_SHORTCUT.to_string()),
         );
-        let default_shortcut = DEFAULT_SHORTCUT
+        DEFAULT_SHORTCUT
             .parse::<Shortcut>()
-            .expect("Default shortcut should be valid");
-        _register_shortcut_upon_start(app, default_shortcut, "main");
-    }
+            .expect("Default shortcut should be valid")
+    };
 
     // Screenshot shortcut
-    if let Some(stored_shortcut) = store.get(COCO_SCREENSHOT_SHORTCUT) {
+    let screenshot_shortcut = if let Some(stored_shortcut) = store.get(COCO_SCREENSHOT_SHORTCUT) {
         let stored_shortcut_str = match stored_shortcut {
             JsonValue::String(str) => str,
             unexpected_type => panic!(
@@ -68,20 +66,67 @@ pub fn enable_shortcut(app: &App) {
                 unexpected_type
             ),
         };
-        let stored_shortcut = stored_shortcut_str
+        stored_shortcut_str
             .parse::<Shortcut>()
-            .expect("Stored shortcut string should be valid");
-        _register_shortcut_upon_start(app, stored_shortcut, "screenshot");
+            .expect("Stored shortcut string should be valid")
     } else {
         store.set(
             COCO_SCREENSHOT_SHORTCUT,
             JsonValue::String(DEFAULT_SCREENSHOT_SHORTCUT.to_string()),
         );
-        let default_shortcut = DEFAULT_SCREENSHOT_SHORTCUT
+        DEFAULT_SCREENSHOT_SHORTCUT
             .parse::<Shortcut>()
-            .expect("Default shortcut should be valid");
-        _register_shortcut_upon_start(app, default_shortcut, "screenshot");
-    }
+            .expect("Default shortcut should be valid")
+    };
+
+    // Now, register both shortcuts with a single plugin instance
+    let app_handle = app.handle();
+    let main_shortcut_clone = main_shortcut.clone();
+    let screenshot_shortcut_clone = screenshot_shortcut.clone();
+
+    app_handle
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_shortcuts([main_shortcut, screenshot_shortcut])
+                .expect("Failed to add shortcuts to builder")
+                .with_handler(move |app, scut, event| {
+                    println!(
+                        "[Handler] Shortcut event for {:?}, state: {:?}",
+                        scut,
+                        event.state()
+                    );
+                    if let ShortcutState::Pressed = event.state() {
+                        if scut == &main_shortcut_clone {
+                            if let Some(window) = app.get_webview_window("main") {
+                                if window.is_visible().unwrap() {
+                                    // window.set_always_on_top(false).unwrap();
+                                    // window.hide().unwrap();
+                                } else {
+                                    if let Ok(position) = app.cursor_position() {
+                                        let shift_x = -100.0;
+                                        let shift_y = -100.0;
+                                        window
+                                            .set_position(tauri::PhysicalPosition::new(
+                                                position.x + shift_x,
+                                                position.y + shift_y,
+                                            ))
+                                            .unwrap();
+                                    }
+                                    window.show().unwrap();
+                                    window.set_focus().unwrap();
+                                    window.set_always_on_top(true).unwrap();
+                                }
+                            } else {
+                                eprintln!("main window not found when shortcut was pressed!");
+                            }
+                        } else if scut == &screenshot_shortcut_clone {
+                            app.emit("internal_take_screenshot", ()).unwrap();
+                        }
+                    }
+                })
+                .build(),
+        )
+        .expect("Failed to register global shortcut plugin");
 }
 
 /// Get the current stored shortcut as a string
@@ -191,61 +236,6 @@ fn _register_shortcut<R: Runtime>(
             }
         })?;
 
-    Ok(())
-}
-
-/// Helper function to register shortcuts during application startup
-fn _register_shortcut_upon_start(
-    app: &App,
-    shortcut: Shortcut,
-    window_label: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    println!(
-        "[_register_shortcut_upon_start] Registering shortcut for {}: {}",
-        window_label, shortcut
-    );
-    let window_label = window_label.to_string();
-    app.handle().plugin(
-        tauri_plugin_global_shortcut::Builder::new()
-            .with_shortcuts([shortcut])?
-            .with_handler(move |app, scut, event| {
-                println!(
-                    "[Handler] Shortcut event for {}: {:?}, state: {:?}",
-                    window_label,
-                    scut,
-                    event.state()
-                );
-                if scut == &shortcut {
-                    if window_label == "screenshot" {
-                        app.emit("internal_take_screenshot", ()).unwrap();
-                    } else if let Some(window) = app.get_webview_window(&window_label) {
-                        if let ShortcutState::Pressed = event.state() {
-                            if window.is_visible().unwrap() {
-                                // window.set_always_on_top(false).unwrap();
-                                // window.hide().unwrap();
-                            } else {
-                                if window_label == "main" {
-                                    if let Ok(position) = app.cursor_position() {
-                                        let shift_x = -100.0;
-                                        let shift_y = -100.0;
-                                        window
-                                            .set_position(tauri::PhysicalPosition::new(
-                                                position.x + shift_x,
-                                                position.y + shift_y,
-                                            ))
-                                            .unwrap();
-                                    }
-                                }
-                                window.show().unwrap();
-                                window.set_focus().unwrap();
-                                window.set_always_on_top(true).unwrap();
-                            }
-                        }
-                    }
-                }
-            })
-            .build(),
-    )?;
     Ok(())
 }
 
