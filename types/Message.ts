@@ -11,6 +11,7 @@ export type Message = {
   conversation_id?: number;
   attachments?: TAttachment[];
   isLoading?: boolean;
+  action?: string;
 };
 export type StoreMessageResponse = {
   message_id: number;

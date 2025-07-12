@@ -5,11 +5,19 @@ import {
   useEffect,
   ReactNode,
   useMemo,
+  useState,
+  useRef,
 } from "react";
 import { load } from "@tauri-apps/plugin-store";
 import { Config } from "@/types/settings/config";
 import { Provider } from "@/types/settings/provider";
 import { defaultConfig } from "@/utils/constants";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import {
+  cursorPosition,
+  getAllWindows,
+  PhysicalPosition,
+} from "@tauri-apps/api/window";
 
 // --- 1. Define State and Action Types ---
 
@@ -131,14 +139,72 @@ interface ConfigContextType {
   isSearch: boolean;
   setIsSearch: () => void;
 }
-
+interface ShortcutContextType {
+  isFirstRender: boolean;
+  firstRenderRef: React.MutableRefObject<boolean>;
+  hidden: boolean;
+  setIsFirstRender: React.Dispatch<React.SetStateAction<boolean>>;
+  handleAppShortcut: () => void;
+}
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
+const ShortcutContext = createContext<ShortcutContextType | undefined>(
+  undefined
+);
 // --- 4. The Refactored Provider Component ---
 
 export const ConfigProvider = ({ children }: { children: ReactNode }) => {
   // All state is now managed by the reducer
   const [state, dispatch] = useReducer(configReducer, initialState);
   const { config, isUpdated, isDeepThinking, isSearch, port } = state;
+  const [isFirstRender, setIsFirstRender] = useState(true);
+  const firstRenderRef = useRef(true);
+  const isFirstInteractionRef = useRef(true);
+  const [hidden, setHidden] = useState(false);
+  const mountRef = useRef<HTMLDivElement>(null);
+  const handleAppShortcut = async () => {
+    const Windows = await getAllWindows();
+    const windowInstance = Windows.find((window) => window.label === "main");
+    const visible = await windowInstance?.isVisible();
+    const shiftY = -100;
+    const shiftX = -100;
+    if (!visible && windowInstance) {
+      const position = await cursorPosition();
+      await windowInstance.show();
+      await windowInstance.setFocus();
+      await windowInstance.setPosition(
+        new PhysicalPosition(position.x + shiftX, position.y + shiftY)
+      );
+      await windowInstance.setAlwaysOnTop(true);
+      setHidden(false);
+    }
+  };
+  const handleEscape = async (e: KeyboardEvent) => {
+    const windowInstance = getCurrentWebviewWindow();
+    if (e.key === "Escape") {
+      if (isFirstInteractionRef.current) {
+        setIsFirstRender(false);
+        isFirstInteractionRef.current = false;
+        setHidden(false);
+        return;
+      }
+      const visible = await windowInstance.isVisible();
+      if (visible) {
+        await windowInstance.hide();
+        setHidden(true);
+      }
+    }
+  };
+  useEffect(() => {
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  useEffect(() => {
+    firstRenderRef.current = isFirstRender;
+  }, [isFirstRender]);
 
   // The loading effect now dispatches an action
   useEffect(() => {
@@ -170,7 +236,18 @@ export const ConfigProvider = ({ children }: { children: ReactNode }) => {
           defaultConfig.selectedDeepThinkingModel;
         needsSave = true;
       }
-
+      if (!storedConfig.SCREENSHOT_SHORTCUT) {
+        storedConfig.SCREENSHOT_SHORTCUT = defaultConfig.SCREENSHOT_SHORTCUT;
+        needsSave = true;
+      }
+      if (!storedConfig.APP_SHORTCUT) {
+        storedConfig.APP_SHORTCUT = defaultConfig.APP_SHORTCUT;
+        needsSave = true;
+      }
+      if (!storedConfig.OUTPUT_DELAY) {
+        storedConfig.OUTPUT_DELAY = defaultConfig.OUTPUT_DELAY;
+        needsSave = true;
+      }
       if (needsSave) {
         await store.set("config", storedConfig);
         await store.save();
@@ -217,13 +294,29 @@ export const ConfigProvider = ({ children }: { children: ReactNode }) => {
       setIsSearch,
       port,
       setPort,
+      isFirstRender,
+      firstRenderRef,
+      hidden,
+      setIsFirstRender,
     }),
     [config, isUpdated, isDeepThinking, isSearch, port]
+  );
+  const shortcutContextValue = useMemo(
+    () => ({
+      isFirstRender,
+      firstRenderRef,
+      hidden,
+      setIsFirstRender,
+      handleAppShortcut,
+    }),
+    [isFirstRender, firstRenderRef, hidden, setIsFirstRender, handleAppShortcut]
   );
 
   return (
     <ConfigContext.Provider value={contextValue}>
-      {children}
+      <ShortcutContext.Provider value={shortcutContextValue}>
+        <div ref={mountRef}>{children}</div>
+      </ShortcutContext.Provider>
     </ConfigContext.Provider>
   );
 };
@@ -233,6 +326,14 @@ export const useConfig = (): ConfigContextType => {
   const context = useContext(ConfigContext);
   if (!context) {
     throw new Error("useConfig must be used within a ConfigProvider");
+  }
+  return context;
+};
+
+export const useShortcut = (): ShortcutContextType => {
+  const context = useContext(ShortcutContext);
+  if (!context) {
+    throw new Error("useShortcut must be used within a ConfigProvider");
   }
   return context;
 };

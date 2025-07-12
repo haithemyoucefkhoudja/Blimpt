@@ -1,8 +1,12 @@
 export type TAttachment = {
   id: string;
-  file?: File;
+  metadata?: {
+    name: string;
+    type: string;
+    size: number;
+    lastModified: number;
+  };
   type: "text" | "file" | "image";
   text?: string;
-  previewUrl?: string;
-  base64?: string;
+  base64: string;
 };

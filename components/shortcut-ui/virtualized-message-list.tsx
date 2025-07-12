@@ -9,7 +9,7 @@ interface VirtualizedMessageListProps {
   messages: Message[];
   isLoading: boolean;
   errorMessage: string;
-  rewrite: (messageId: string, conversationId: number) => void;
+  rewrite: (messageId: string) => void;
 }
 const MIN_MESSAGE_HEIGHT = 600;
 
@@ -69,11 +69,9 @@ const VirtualizedMessageList = memo(function VirtualizedMessageList({
       const message = messages[index];
       return (
         <MessageBox
-          loading={isLoading && index === messages.length - 1}
           rewrite={rewrite}
           message={message}
           messageIndex={index}
-          history={messages}
           type="list"
         />
       );

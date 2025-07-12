@@ -21,14 +21,17 @@ const CopyCode = ({ code }: { code: string }) => {
 const Copy = ({
   message,
   initialMessage,
+  disabled,
 }: {
   message: Message;
   initialMessage: string;
+  disabled?: boolean;
 }) => {
   const [copied, setCopied] = useState(false);
 
   return (
     <button
+      disabled={disabled}
       onClick={() => {
         const contentToCopy = `${initialMessage}${
           message.sources &&

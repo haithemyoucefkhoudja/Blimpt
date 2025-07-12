@@ -1,10 +1,14 @@
 mod helper;
+mod screenshot;
+mod shortcut;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    Manager, WebviewUrl, WebviewWindowBuilder,
+    Listener, Manager, WebviewUrl, WebviewWindowBuilder,
 };
+
+use crate::screenshot::take_screenshot;
 // #[tauri::command]
 // fn greet(name: &str) -> String {
 //     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -21,8 +25,11 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
-            #[cfg(desktop)]
-            app.handle().plugin(tauri_plugin_global_shortcut::Builder::new().build());
+            // #[cfg(desktop)]
+            // app.handle()
+            //     .plugin(tauri_plugin_global_shortcut::Builder::new().build());
+
+            // #[cfg(desktop)]
 
             #[cfg(debug_assertions)]
             const IS_DEV: bool = true;
@@ -35,28 +42,42 @@ pub fn run() {
                 .transparent(true)
                 .shadow(false)
                 .center();
+            let screenshot_window =
+                WebviewWindowBuilder::new(app, "screenshot", WebviewUrl::App("/screenshot".into()))
+                    .title("Screenshot")
+                    .decorations(false)
+                    .fullscreen(true)
+                    .transparent(true)
+                    .shadow(false)
+                    .build()
+                    .unwrap()
+                    .hide()
+                    .unwrap();
+            let handle = app.handle().clone();
+            app.listen("internal_take_screenshot", move |_event| {
+                let handle = handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = take_screenshot(handle).await {
+                        eprintln!("Error taking screenshot: {}", e);
+                    }
+                });
+            });
 
-            // WebviewWindowBuilder::new(app, "local", WebviewUrl::App("second".into()))
-            //     .title("Local Window")
-            //     .visible(false)
-            //     .maximized(true)
-            //     .build()
-            //     .unwrap();
-
-            // let command_window =
-            //     WebviewWindowBuilder::new(app, "commands", WebviewUrl::App("commands".into()))
-            //         .title("Commands Window")
-            //         .visible(false)
-            //         .transparent(true)
-            //         .decorations(false)
-            //         .shadow(false);
+            #[cfg(desktop)]
+            shortcut::enable_shortcut(app);
             // Create menu items
             let open_local_i =
                 MenuItem::with_id(app, "open_local", "Quick Tool Window", true, None::<&str>)?;
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-
+            let take_screenshot_i = MenuItem::with_id(
+                app,
+                "take_screenshot",
+                "Take Screenshot",
+                true,
+                None::<&str>,
+            )?;
             // Create the menu with the items
-            let menu = Menu::with_items(app, &[&open_local_i, &quit_i])?;
+            let menu = Menu::with_items(app, &[&open_local_i, &take_screenshot_i, &quit_i])?;
 
             // Build the tray icon
             TrayIconBuilder::new()
@@ -67,8 +88,29 @@ pub fn run() {
                         println!("open_local menu item was clicked");
                         app.get_webview_window("main").unwrap().show();
                     }
+                    "take_screenshot" => {
+                        // To call your async command, you must clone the handle and spawn it
+                        let handle = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            // Now you can pass the owned `handle` to the function
+                            if let Err(e) = screenshot::take_screenshot(handle).await {
+                                eprintln!("Error taking screenshot: {}", e);
+                            }
+                        });
+                    }
                     "quit" => {
                         println!("quit menu item was clicked");
+                        let app_handle = app.clone();
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            if let Err(err) = window.close() {
+                                println!("Tried and failed to close the window before exiting: {}", err);
+                            }
+                        }
+                        if let Some(window) = app_handle.get_webview_window("screenshot") {
+                            if let Err(err) = window.close() {
+                                println!("Tried and failed to close the window before exiting: {}", err);
+                            }
+                        }
                         app.exit(0);
                     }
                     _ => {
@@ -114,11 +156,6 @@ pub fn run() {
                 // let _ = autostart_manager.disable();
             }
 
-            #[cfg(desktop)]
-            let _ = app
-                .handle()
-                .plugin(tauri_plugin_global_shortcut::Builder::new().build());
-
             let _window = win_builder.build().unwrap();
 
             // let _local_window = local_window.build().unwrap();
@@ -148,6 +185,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             start_setup,
             helper::get_searxng_state,
+            screenshot::take_screenshot,
+            shortcut::change_shortcut,
+            shortcut::unregister_shortcut,
+            shortcut::get_current_shortcut,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

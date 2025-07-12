@@ -8,7 +8,7 @@ import { useChat } from "@/providers/chat-provider";
 export const MessageDisplay = memo(function MessageDisplay() {
   const { ActiveWindow } = useAppResize();
 
-  const { lastMessage, messages, isLoading, error, rewrite } = useChat();
+  const { lastMessage, messages, error, rewrite } = useChat();
 
   if (ActiveWindow !== "chat") return null;
   if (!lastMessage && !error) return null;

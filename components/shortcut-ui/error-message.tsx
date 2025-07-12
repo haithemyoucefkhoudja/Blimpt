@@ -21,7 +21,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
       <div
         data-tauri-drag-region
         className={cn(
-          "flex w-full items-center px-4 py-3 rounded relative max-w-md",
+          "flex w-full items-center px-4 py-3 rounded relative ",
           "bg-red-50 border border-red-400 text-red-700",
           "dark:bg-red-900/50 dark:border-red-800 dark:text-red-200",
           type === "list" && "max-h-24"
@@ -31,9 +31,9 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
         <AlertCircle className="w-6 h-6 mr-2" />
         <span
           className={cn(
-            "text-sm font-medium ",
+            "text-sm font-medium break-words max-w-full",
             type === "list" && "truncate",
-            type !== "list" && "break-words text-wrap"
+            type !== "list" && " text-wrap"
           )}
         >
           {message}

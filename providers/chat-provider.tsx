@@ -6,8 +6,7 @@ import { CLOSE_DELAY } from "@/utils/constants";
 import type { chatModel } from "@/ai";
 import { useSizeChange } from "@/components/shortcut-ui/hooks/use-app-resize";
 import { TAttachment } from "@/types/attachment";
-import useShortcut from "@/components/shortcut-ui/hooks/use-shortcut";
-import { useConfig } from "@/providers/config-provider";
+import { useConfig, useShortcut } from "@/providers/config-provider";
 import type { CustomProvider } from "@/types/settings/provider";
 import {
   createContext,
@@ -20,7 +19,11 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import {
+  cursorPosition,
+  getCurrentWindow,
+  PhysicalPosition,
+} from "@tauri-apps/api/window";
 import type { Conversation } from "@/types/Conversation";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { ChatOpenAI } from "@langchain/openai";
@@ -30,6 +33,10 @@ import { editMessage, storeMessage } from "@/db/database";
 import { callWithRetry, trimHistory, handleChatRequestNoSearch } from "@/lib";
 import { messageList } from "@/components/shortcut-ui/test";
 import delay from "@/lib/delay";
+import { listen } from "@tauri-apps/api/event";
+import { readFileAsBase64 } from "@/lib/readFileAsBase64";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+
 interface ChatContextValue {
   messages: Message[];
   lastMessage: Message | null;
@@ -71,20 +78,6 @@ interface InputContextValue {
 }
 const MAX_RETRIES = 3;
 
-const readFileAsBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result.split(",")[1]);
-      } else {
-        reject(new Error("Failed to read file as base64"));
-      }
-    };
-    reader.onerror = (error) => reject(error);
-    reader.readAsDataURL(file);
-  });
-};
 // Helper functions moved outside component to avoid recreation on each render
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
 const InputContext = createContext<InputContextValue | undefined>(undefined);
@@ -110,9 +103,14 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const stopRef = useRef(stop);
   // Hooks
   const { config, isDeepThinking, port, isSearch } = useConfig();
-
-  const { isFirstRender, firstRenderRef, hidden, setIsFirstRender } =
-    useShortcut();
+  const {
+    isFirstRender,
+    firstRenderRef,
+    hidden,
+    setIsFirstRender,
+    handleAppShortcut,
+  } = useShortcut();
+  const { OUTPUT_DELAY } = config;
   const newChatStarter = () => {
     ("newChatStarter");
     setMessages([]);
@@ -122,6 +120,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setStop(true);
     setConversation(null);
     setIsLoading({ state: false, id: null });
+    clearAttachments();
   };
   useEffect(() => {
     if (hidden) setLastMessage(null);
@@ -161,9 +160,6 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     // Handler for size changes
   }, sizeChangeDeps);
   // Helper functions
-  const closeWindow = useCallback(() => {
-    setLastMessage(null);
-  }, []);
   const getModel = useCallback(
     (title = false) => {
       let model: chatModel = {} as chatModel;
@@ -267,7 +263,10 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         let title = conversation?.title || "";
 
         // If no conversation or no ID, we need to create a new conversation
-        const isNewConversation = !conversation || !conversation.id;
+        const isNewConversation =
+          !conversation ||
+          !conversation.id ||
+          conversation.title.startsWith("Assistant");
 
         // Generate a title for new conversations
         if (isNewConversation) {
@@ -276,6 +275,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             title = await updateConversation({
               query: input,
               chatModel: getModel(true),
+              attachments,
             });
           } catch (error) {
             // Fallback title if generation fails
@@ -323,16 +323,24 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     [getModel, apiStoreMessage] // Removed setConversation since it's commented out
   );
   const updateConversation = useCallback(
-    async (body: { query: string; chatModel: chatModel }) => {
+    async ({
+      query,
+      chatModel,
+      attachments,
+    }: {
+      query: string;
+      chatModel: chatModel;
+      attachments: TAttachment[];
+    }) => {
       let llm: BaseChatModel;
 
-      if (body.chatModel.provider === "custom_openai") {
-        if (!body.chatModel.customOpenAIKey) {
+      if (chatModel.provider === "custom_openai") {
+        if (!chatModel.customOpenAIKey) {
           throw new Error(
             "Missing customOpenAIKey for custom_openai provider."
           );
         }
-        if (!body.chatModel.customOpenAIBaseURL) {
+        if (!chatModel.customOpenAIBaseURL) {
           throw new Error(
             "Missing customOpenAIBaseURL for custom_openai provider."
           );
@@ -340,10 +348,10 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         try {
           llm = new ChatOpenAI({
-            modelName: body.chatModel.model,
-            openAIApiKey: body.chatModel.customOpenAIKey,
+            modelName: chatModel.model,
+            openAIApiKey: chatModel.customOpenAIKey,
             configuration: {
-              baseURL: body.chatModel.customOpenAIBaseURL,
+              baseURL: chatModel.customOpenAIBaseURL,
             },
             temperature: 0,
           }) as unknown as BaseChatModel;
@@ -353,9 +361,9 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       } else {
         try {
           llm = (await getChatModel(
-            body.chatModel.provider,
-            body.chatModel.apiKey,
-            body.chatModel.model
+            chatModel.provider,
+            chatModel.apiKey,
+            chatModel.model
           )) as BaseChatModel;
           (llm as any).temperature = 0;
         } catch (error: any) {
@@ -363,11 +371,14 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
           throw new Error("Error initializing chat model: " + error.message);
         }
       }
-
+      const prompt = `You are responsible for creating Title for the conversation.  given the first user message don't answer the question create general title based on user Input\n      UserMessage: \n      ${query}`;
       try {
-        const stream = await llm.stream(
-          `Summarize this user query into a simple title ****Don't Use MarkDown****: "${body.query}"`
-        );
+        const stream = await llm.stream([
+          {
+            role: "user",
+            content: [{ type: "text", text: prompt }],
+          },
+        ]);
         let chunks = "";
         let isFirst = true;
 
@@ -383,330 +394,10 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         return chunks;
       } catch (error: any) {
-        return body.query;
+        return query;
       }
     },
     []
-  );
-  const MocksendLLMMessage = useCallback(
-    async (
-      userMessageContent: string,
-      currentHistory: Message[],
-      attachments: TAttachment[],
-      existingMessageId?: string
-    ) => {
-      ("sendLLMMessage");
-      const currentModel = getModel();
-      const mode = existingMessageId ? "edit" : "new";
-      const optimisticAssistantId = existingMessageId || uuid(); // Use existing or new optimistic ID
-      // 1. Prepare User Content (including clipboard)
-
-      setInput("");
-      setIsLoading({ state: true, id: optimisticAssistantId });
-      setError(null); // Clear previous errors
-      setStop(false); // Allow streaming
-
-      let finalUserMessageId: string | null = null;
-      let conversationDetailsForAssistant = conversation;
-
-      // 2. Handle User Message (if "new" mode)
-      if (mode === "new") {
-        const optimisticUserMessageId = uuid();
-        const userMessage: Message = {
-          id: optimisticUserMessageId,
-          content: userMessageContent,
-          role: "user",
-          timestamp: new Date().toISOString(),
-          attachments,
-        };
-        setMessages((prev) => [...prev, userMessage]);
-
-        try {
-          const userSaveResult = await callWithRetry(
-            () =>
-              saveUserMessage(
-                userMessage.content,
-                attachments,
-                conversationDetailsForAssistant
-              ),
-            MAX_RETRIES
-          );
-          conversationDetailsForAssistant = {
-            title: userSaveResult.title,
-            id: userSaveResult.res.conversation_id,
-            timestamp: new Date().toISOString(),
-          };
-          finalUserMessageId = String(userSaveResult.res.message_id);
-
-          // Update user message with final ID from DB
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === optimisticUserMessageId
-                ? { ...msg, id: finalUserMessageId! }
-                : msg
-            )
-          );
-        } catch (err: any) {
-          setError(`Failed to save user message: ${err.message}`);
-          setIsLoading({ state: false, id: null });
-          setStop(true);
-          // Optionally remove the optimistic user message or mark it as failed
-          setMessages((prev) =>
-            prev.filter((msg) => msg.id !== optimisticUserMessageId)
-          );
-          return;
-        }
-      }
-
-      // 3. Prepare History for LLM
-      // History should be based on the state *before* adding the new optimistic user message if applicable,
-      // or up to the point of rewrite.
-      const historyForLLM = currentHistory;
-
-      const trimmedHistory = await trimHistory(
-        historyForLLM.map((msg) => ({
-          role: msg.role as "user" | "assistant",
-          content: [
-            {
-              type: "text",
-              text: msg.content,
-            },
-            ...(msg.attachments?.map((item) => ({
-              type: "image_url",
-              image_url: `data:image/jpeg;base64,${item.base64}`,
-            })) || []),
-          ],
-        })),
-        userMessageContent, // Use the version with context
-        attachments,
-        config.MAX_TOKENS
-      );
-      console.log("trimmedHistory:", trimmedHistory);
-
-      // 4. Prepare Assistant Message (Optimistic Add or Find for Edit)
-      let assistantMessage: Message = {
-        id: optimisticAssistantId,
-        content: "",
-        role: "assistant",
-        sources: [],
-        isLoading: true,
-        timestamp: new Date().toISOString(),
-        conversation_id: conversationDetailsForAssistant.id, // Link to conversation
-      };
-
-      if (mode === "new") {
-        // Add optimistic assistant shell
-        setMessages((prev) => [...prev, assistantMessage]);
-      } else {
-        // For edit mode, update the existing message to clear content
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === optimisticAssistantId
-              ? {
-                  ...m,
-                  content: "",
-                  sources: [],
-                  reasoning: undefined,
-                  timestamp: new Date().toISOString(),
-                }
-              : m
-          )
-        );
-        // Re-fetch the assistant message from state to ensure we're working with the latest version for updates
-        const existingMsg = messages.find(
-          (m) => m.id === optimisticAssistantId
-        );
-        if (existingMsg)
-          assistantMessage = {
-            ...existingMsg,
-            content: "",
-            sources: [],
-            reasoning: undefined,
-            timestamp: new Date().toISOString(),
-          };
-      }
-
-      // 5. Make API Call and Stream Response
-      const requestBody: ChatRequestBody = {
-        port: port || "",
-        query: userMessageContent,
-        chatModel: currentModel,
-        history: trimmedHistory.map((msg) => [msg.role, msg.content]),
-        focusMode: searchMode,
-        optimizationMode: "balanced",
-        attachments: attachments,
-      };
-
-      // const chatGenerator =
-      //   port && isSearch
-      //     ? handleChatRequest(requestBody)
-      //     : handleChatRequestNoSearch(requestBody);
-
-      let accumulatedContent = "";
-      let accumulatedSources: any[] = [];
-      let accumulatedReasoning = "";
-
-      try {
-        for await (const event of messageList) {
-          await delay(100);
-          if (stopRef.current) break;
-
-          let needsUpdate = false;
-          if (event.type === "message") {
-            accumulatedContent += event.data;
-            needsUpdate = true;
-          }
-          // } else if (event.type === "sources") {
-          //   accumulatedSources = event.data; // Assuming sources are replaced, not appended
-          //   needsUpdate = true;
-          // } else if (event.type === "reasoning") {
-          //   accumulatedReasoning += event.data;
-          //   needsUpdate = true;
-          // } else if (event.type === "error") {
-          //   throw new Error(event.data); // Propagate error to catch block
-          // }
-
-          if (needsUpdate) {
-            setMessages((prevMsgs) =>
-              prevMsgs.map((m) =>
-                m.id === optimisticAssistantId
-                  ? {
-                      ...m,
-                      content: accumulatedContent,
-                      sources: accumulatedSources,
-                      reasoning: accumulatedReasoning || undefined, // Keep undefined if empty
-                      isLoading: true,
-                    }
-                  : m
-              )
-            );
-            setLastMessage({
-              id: optimisticAssistantId,
-              content: accumulatedContent,
-              role: "assistant",
-              sources: accumulatedSources,
-              reasoning: accumulatedReasoning || undefined,
-              timestamp: new Date().toISOString(),
-              conversation_id: conversationDetailsForAssistant.id,
-              isLoading: true,
-            });
-          }
-        }
-
-        if (stopRef.current && !accumulatedContent) {
-          // Ensure at least some content if stopped early
-          accumulatedContent = " ";
-          setMessages((prevMsgs) =>
-            prevMsgs.map((m) =>
-              m.id === optimisticAssistantId
-                ? { ...m, content: accumulatedContent }
-                : m
-            )
-          );
-        }
-
-        // 6. Finalize Assistant Message in DB
-        const finalAssistantMessageData = {
-          id: "", // DB will assign
-          content: accumulatedContent,
-          role: "assistant" as "assistant",
-          timestamp: assistantMessage.timestamp, // Use initial timestamp or update to new Date().toISOString()
-          sources: accumulatedSources,
-          // suggestions: assistantMessage.suggestions, // Add if you have suggestions
-          conversation_id: conversationDetailsForAssistant.id,
-          reasoning: accumulatedReasoning || undefined,
-          isLoading: false,
-        };
-
-        let finalAssistantDbId: string = optimisticAssistantId;
-
-        if (mode === "new") {
-          const storeRes = await callWithRetry(
-            () =>
-              storeMessage(
-                finalAssistantMessageData,
-                conversationDetailsForAssistant.title
-              ),
-            MAX_RETRIES
-          );
-          if (typeof storeRes === "string") throw new Error(storeRes);
-          finalAssistantDbId = String(storeRes.message_id);
-        } else {
-          const editRes = await callWithRetry(
-            () =>
-              editMessage(
-                Number(optimisticAssistantId),
-                finalAssistantMessageData
-              ),
-            MAX_RETRIES
-          );
-          if (editRes !== "success") throw new Error(editRes);
-          // finalAssistantDbId remains optimisticAssistantId as it's an edit
-        }
-
-        // Update message in state with final DB ID (if new) and ensure all data is consistent
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === optimisticAssistantId
-              ? {
-                  ...msg, // Spread existing fields first
-                  id: finalAssistantDbId, // Update ID if it changed
-                  content: accumulatedContent,
-                  isLoading: false,
-                  sources: accumulatedSources,
-                  reasoning: accumulatedReasoning || undefined,
-                  conversation_id: conversationDetailsForAssistant.id,
-                  timestamp: finalAssistantMessageData.timestamp, // Ensure timestamp is consistent
-                }
-              : msg
-          )
-        );
-        setLastMessage({
-          id: finalAssistantDbId, // Update ID if it changed
-          content: accumulatedContent,
-          isLoading: false,
-          sources: accumulatedSources,
-          reasoning: accumulatedReasoning || undefined,
-          conversation_id: conversationDetailsForAssistant.id,
-          timestamp: finalAssistantMessageData.timestamp, // Ensure timestamp is consistent
-          role: "assistant",
-        });
-      } catch (err: any) {
-        setError(`LLM processing error: ${err.message}`);
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === optimisticAssistantId
-              ? {
-                  ...msg, // Spread existing fields first
-                  isLoading: false, // Update ID if it changed
-                }
-              : msg
-          )
-        );
-        setLastMessage({
-          ...lastMessage,
-          isLoading: false,
-        });
-        // If assistant message was optimistically added, consider removing or marking as error
-        // For simplicity here, we just show the error.
-      } finally {
-        // setIsLoading({ state: false, id: null });
-
-        setStop(true);
-      }
-    },
-    [
-      getModel,
-      saveUserMessage,
-      messages,
-      attachments,
-      conversation,
-      lastMessage,
-      error,
-      input,
-      stop,
-      isLoading,
-    ]
   );
   const sendLLMMessage = useCallback(
     async (
@@ -730,52 +421,16 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       let conversationDetailsForAssistant = conversation;
 
       // 2. Handle User Message (if "new" mode)
+      const optimisticUserMessageId = uuid();
+      const userMessage: Message = {
+        id: optimisticUserMessageId,
+        content: userMessageContent,
+        role: "user",
+        timestamp: new Date().toISOString(),
+        attachments,
+      };
       if (mode === "new") {
-        const optimisticUserMessageId = uuid();
-        const userMessage: Message = {
-          id: optimisticUserMessageId,
-          content: userMessageContent,
-          role: "user",
-          timestamp: new Date().toISOString(),
-          attachments,
-        };
         setMessages((prev) => [...prev, userMessage]);
-
-        try {
-          const userSaveResult = await callWithRetry(
-            () =>
-              saveUserMessage(
-                userMessage.content,
-                attachments,
-                conversationDetailsForAssistant
-              ),
-            MAX_RETRIES
-          );
-          conversationDetailsForAssistant = {
-            title: userSaveResult.title,
-            id: userSaveResult.res.conversation_id,
-            timestamp: new Date().toISOString(),
-          };
-          finalUserMessageId = String(userSaveResult.res.message_id);
-
-          // Update user message with final ID from DB
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === optimisticUserMessageId
-                ? { ...msg, id: finalUserMessageId! }
-                : msg
-            )
-          );
-        } catch (err: any) {
-          setError(`Failed to save user message: ${err.message}`);
-          setIsLoading({ state: false, id: null });
-          setStop(true);
-          // Optionally remove the optimistic user message or mark it as failed
-          setMessages((prev) =>
-            prev.filter((msg) => msg.id !== optimisticUserMessageId)
-          );
-          return;
-        }
       }
 
       // 3. Prepare History for LLM
@@ -783,44 +438,45 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       // or up to the point of rewrite.
       const historyForLLM = currentHistory;
 
-      const trimmedHistory = await trimHistory(
-        historyForLLM.map((msg) => ({
-          role: msg.role as "user" | "assistant",
-          content: [
-            {
-              type: "text",
-              text: msg.content,
-            },
-            ...(msg.attachments?.map((item) => {
-              console.log(item.base64);
-              switch (item.type) {
-                case "image":
-                  return {
-                    type: "image_url",
-                    image_url: {
-                      url: `data:image/jpeg;base64,${item.base64}`,
-                    },
-                  };
-                case "text":
-                  return {
-                    type: "text",
-                    text: item.text,
-                  };
-                default:
-                  return {
-                    type: "text",
-                    text: "Unsupported attachment type",
-                  };
-              }
-            }) || []),
-          ],
-        })),
-        userMessageContent, // Use the version with context
-        attachments,
-        config.MAX_TOKENS
-      );
+      const trimmedHistory = historyForLLM.map((msg) => ({
+        role: msg.role as "user" | "assistant",
+        content: [
+          {
+            type: "text",
+            text: msg.content,
+          },
+          ...(msg.attachments?.map((item) => {
+            switch (item.type) {
+              case "image":
+                return {
+                  type: "image_url",
+                  image_url: { url: item.base64 },
+                };
+              case "text":
+                return {
+                  type: "text",
+                  text: item.text,
+                };
+              default:
+                return {
+                  type: "text",
+                  text: "Unsupported attachment type",
+                };
+            }
+          }) || []),
+        ],
+      }));
 
       // 4. Prepare Assistant Message (Optimistic Add or Find for Edit)
+      conversationDetailsForAssistant =
+        conversation && conversation.id
+          ? conversation
+          : {
+              id: Math.floor(Math.random() * 100),
+              title: `Assistant ${new Date().toISOString()}`,
+              timestamp: new Date().toISOString(),
+            };
+      setConversation(conversationDetailsForAssistant);
       let assistantMessage: Message = {
         id: optimisticAssistantId,
         content: "",
@@ -841,9 +497,11 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             m.id === optimisticAssistantId
               ? {
                   ...m,
+                  action: "Waiting...",
                   content: "",
                   sources: [],
                   reasoning: undefined,
+                  isLoading: true,
                   timestamp: new Date().toISOString(),
                 }
               : m
@@ -856,8 +514,10 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (existingMsg)
           assistantMessage = {
             ...existingMsg,
+            action: "Waiting...",
             content: "",
             sources: [],
+            isLoading: true,
             reasoning: undefined,
             timestamp: new Date().toISOString(),
           };
@@ -882,50 +542,150 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
       let accumulatedContent = "";
       let accumulatedSources: any[] = [];
       let accumulatedReasoning = "";
-
+      let newAction = "";
       try {
         for await (const event of chatGenerator) {
-          // await delay(300);
           if (stopRef.current) break;
+          let updateType = "";
+          let newContent = "";
+          let newReasoning = "";
 
-          let needsUpdate = false;
           if (event.type === "message") {
-            accumulatedContent += event.data;
-            needsUpdate = true;
+            newAction = "Generating...";
+            newContent = event.data;
+            updateType = "content";
           } else if (event.type === "sources") {
+            newAction = "Sources...";
             accumulatedSources = event.data; // Assuming sources are replaced, not appended
-            needsUpdate = true;
+            updateType = "sources";
           } else if (event.type === "reasoning") {
-            accumulatedReasoning += event.data;
-            needsUpdate = true;
+            newAction = "Reasoning...";
+            newReasoning = event.data;
+            updateType = "reasoning";
           } else if (event.type === "error") {
             throw new Error(event.data); // Propagate error to catch block
+          } else if (event.type === "action") {
+            newAction = event.data;
+            updateType = "action";
           }
+          switch (updateType) {
+            case "content":
+              for (let i = 0; i < newContent.length; i++) {
+                await delay(OUTPUT_DELAY);
+                accumulatedContent += newContent[i];
 
-          if (needsUpdate) {
-            setMessages((prevMsgs) =>
-              prevMsgs.map((m) =>
-                m.id === optimisticAssistantId
-                  ? {
-                      ...m,
-                      content: accumulatedContent,
-                      sources: accumulatedSources,
-                      reasoning: accumulatedReasoning || undefined, // Keep undefined if empty
-                      isLoading: true,
-                    }
-                  : m
-              )
-            );
-            setLastMessage({
-              id: optimisticAssistantId,
-              content: accumulatedContent,
-              role: "assistant",
-              sources: accumulatedSources,
-              reasoning: accumulatedReasoning || undefined,
-              timestamp: new Date().toISOString(),
-              conversation_id: conversationDetailsForAssistant.id,
-              isLoading: true,
-            });
+                setMessages((prevMsgs) =>
+                  prevMsgs.map((m) =>
+                    m.id === optimisticAssistantId
+                      ? {
+                          ...m,
+                          content: accumulatedContent,
+                          sources: accumulatedSources,
+                          reasoning: accumulatedReasoning || undefined, // Keep undefined if empty
+                          isLoading: true,
+                          action: newAction,
+                        }
+                      : m
+                  )
+                );
+                setLastMessage({
+                  id: optimisticAssistantId,
+                  content: accumulatedContent,
+                  role: "assistant",
+                  sources: accumulatedSources,
+                  reasoning: accumulatedReasoning || undefined,
+                  timestamp: new Date().toISOString(),
+                  conversation_id: conversationDetailsForAssistant.id,
+                  isLoading: true,
+                  action: newAction,
+                });
+              }
+              break;
+            case "reasoning":
+              for (let i = 0; i < newReasoning.length; i++) {
+                await delay(OUTPUT_DELAY);
+                accumulatedReasoning += newReasoning[i];
+                setMessages((prevMsgs) =>
+                  prevMsgs.map((m) =>
+                    m.id === optimisticAssistantId
+                      ? {
+                          ...m,
+                          content: accumulatedContent,
+                          sources: accumulatedSources,
+                          reasoning: accumulatedReasoning || undefined, // Keep undefined if empty
+                          isLoading: true,
+                          action: newAction,
+                        }
+                      : m
+                  )
+                );
+                setLastMessage({
+                  id: optimisticAssistantId,
+                  content: accumulatedContent,
+                  role: "assistant",
+                  sources: accumulatedSources,
+                  reasoning: accumulatedReasoning || undefined,
+                  timestamp: new Date().toISOString(),
+                  conversation_id: conversationDetailsForAssistant.id,
+                  isLoading: true,
+                  action: newAction,
+                });
+              }
+              break;
+            case "sources":
+              setMessages((prevMsgs) =>
+                prevMsgs.map((m) =>
+                  m.id === optimisticAssistantId
+                    ? {
+                        ...m,
+                        content: accumulatedContent,
+                        sources: accumulatedSources,
+                        reasoning: accumulatedReasoning || undefined, // Keep undefined if empty
+                        isLoading: true,
+                        action: newAction,
+                      }
+                    : m
+                )
+              );
+              setLastMessage({
+                id: optimisticAssistantId,
+                content: accumulatedContent,
+                role: "assistant",
+                sources: accumulatedSources,
+                reasoning: accumulatedReasoning || undefined,
+                timestamp: new Date().toISOString(),
+                conversation_id: conversationDetailsForAssistant.id,
+                isLoading: true,
+                action: newAction,
+              });
+              break;
+            case "action":
+              setMessages((prevMsgs) =>
+                prevMsgs.map((m) =>
+                  m.id === optimisticAssistantId
+                    ? {
+                        ...m,
+                        content: accumulatedContent,
+                        sources: accumulatedSources,
+                        reasoning: accumulatedReasoning || undefined, // Keep undefined if empty
+                        isLoading: true,
+                        action: newAction,
+                      }
+                    : m
+                )
+              );
+              setLastMessage({
+                id: optimisticAssistantId,
+                content: accumulatedContent,
+                role: "assistant",
+                sources: accumulatedSources,
+                reasoning: accumulatedReasoning || undefined,
+                timestamp: new Date().toISOString(),
+                conversation_id: conversationDetailsForAssistant.id,
+                isLoading: true,
+                action: newAction,
+              });
+              break;
           }
         }
 
@@ -957,6 +717,43 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         let finalAssistantDbId: string = optimisticAssistantId;
 
         if (mode === "new") {
+          try {
+            const userSaveResult = await callWithRetry(
+              () =>
+                saveUserMessage(
+                  userMessage.content,
+                  attachments,
+                  conversationDetailsForAssistant
+                ),
+              MAX_RETRIES
+            );
+            conversationDetailsForAssistant = {
+              title: userSaveResult.title,
+              id: userSaveResult.res.conversation_id,
+              timestamp: new Date().toISOString(),
+            };
+            finalAssistantMessageData.conversation_id =
+              userSaveResult.res.conversation_id;
+            finalUserMessageId = String(userSaveResult.res.message_id);
+
+            // Update user message with final ID from DB
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === optimisticUserMessageId
+                  ? { ...msg, id: finalUserMessageId! }
+                  : msg
+              )
+            );
+          } catch (err: any) {
+            setError(`Failed to save user message: ${err.message}`);
+            setIsLoading({ state: false, id: null });
+            setStop(true);
+            // Optionally remove the optimistic user message or mark it as failed
+            setMessages((prev) =>
+              prev.filter((msg) => msg.id !== optimisticUserMessageId)
+            );
+            return;
+          }
           const storeRes = await callWithRetry(
             () =>
               storeMessage(
@@ -1143,6 +940,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     } finally {
       setIsLoading({ id: null, state: false });
       setInput("");
+      clearAttachments();
       setStop(true);
     }
   }, [input, messages, attachments, sendLLMMessage]);
@@ -1164,32 +962,44 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
   }, [firstRenderRef, setIsFirstRender]);
 
+  useEffect(() => {
+    const unlisten = listen("cropped_image", (event) => {
+      const base64 = event.payload as string;
+      addAttachment({
+        id: uuid(),
+        metadata: {
+          name: `screenshot-${Date.now()}.png`,
+          type: "image/png",
+          size: 0,
+          lastModified: Date.now(),
+        },
+        base64: base64,
+        type: "image",
+        text: `screenshot-${Date.now()}.png`,
+      });
+
+      handleAppShortcut();
+    });
+
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
+
   const addAttachment = useCallback((attachment: TAttachment) => {
     if (!attachment) return;
 
     setAttachments((prev) => {
       const newItem: TAttachment = attachment;
 
-      if (attachment.type.startsWith("image") || attachment.type === "image") {
-        if (attachment.file) {
-          newItem.previewUrl = URL.createObjectURL(attachment.file);
-          readFileAsBase64(attachment.file).then((base64) => {
-            newItem.base64 = base64;
-          });
-        }
-      }
-
       let newItems = [];
       if (prev && prev.length > 0)
         newItems = [
           newItem,
-          ...prev.filter((item) => item.id !== attachment.id),
+          ...prev.filter((item) => item.id === attachment.id),
         ];
       else {
         newItems = [newItem];
-      }
-      if (newItems.length > 10) {
-        return newItems.slice(0, 10);
       }
       return newItems;
     });
@@ -1210,46 +1020,31 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const newFiles = Array.from(event.target.files);
-      const newAttachedFileItems: TAttachment[] = newFiles.map((file) => {
-        const item: TAttachment = {
-          id: `${file.name}-${file.lastModified}-${file.size}-${Math.random()
-            .toString(36)
-            .substring(7)}`,
-          file,
-          type: file.type.startsWith("image/") ? "image" : "file",
-          text: file.name,
-        };
-        if (item.type === "image") {
-          item.previewUrl = URL.createObjectURL(file);
+      newFiles.map((file) => {
+        if (file.type.startsWith("image/")) {
           readFileAsBase64(file).then((base64) => {
-            item.base64 = base64;
+            const item: TAttachment = {
+              id: `${file.name}-${file.lastModified}-${
+                file.size
+              }-${Math.random().toString(36).substring(7)}`,
+              metadata: {
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                lastModified: file.lastModified,
+              },
+              type: "image",
+              text: file.name,
+              base64: `data:${file.type};base64,${base64}`,
+            };
+            addAttachment(item);
           });
         }
-        return item;
-      });
-      setAttachments((prevFiles) => {
-        const existingFileIds = new Set(prevFiles.map((f) => f.id));
-        const uniqueNewFiles = newAttachedFileItems.filter(
-          (nf) => !existingFileIds.has(nf.id)
-        );
-        return [...prevFiles, ...uniqueNewFiles];
       });
       event.target.value = "";
     }
   };
 
-  // const removeFile = (fileIdToRemove: string) => {
-  //   setAttachedFiles((prevFiles) =>
-  //     prevFiles.filter((item) => {
-  //       if (item.id === fileIdToRemove) {
-  //         if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
-  //         return false;
-  //       }
-  //       return true;
-  //     })
-  //   );
-  // };
-  // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => {
     return {
       stop,

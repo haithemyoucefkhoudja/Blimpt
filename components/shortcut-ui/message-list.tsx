@@ -57,7 +57,10 @@ function reducer(state: any, action: any) {
       return { ...state, ...action.payload };
 
     case "SET_DATA":
-      return { ...state, data: action.payload };
+      return {
+        ...state,
+        data: action.payload,
+      };
 
     case "PREPEND_DATA":
       // When prepending, all existing indices shift. The simplest way to handle this
@@ -74,7 +77,6 @@ function reducer(state: any, action: any) {
       const data = state.data.map((item: any, index: number) => {
         return {
           ...item,
-          id: index + 1,
           index: index + 1,
         };
       });
@@ -88,6 +90,7 @@ function reducer(state: any, action: any) {
 
     case "SET_ITEM_SIZE": {
       const { index, size } = action.payload;
+
       if (state.itemSizes.get(index) === size) return state;
 
       const newItemSizes = new Map(state.itemSizes);
@@ -172,7 +175,7 @@ function reducer(state: any, action: any) {
 
       //   // Invalidate the size of the updated item so it gets remeasured only for new line!
 
-      if (newItemData == "") {
+      if (newItemData.content == "") {
         const newItemSizes = new Map(state.itemSizes);
         newItemSizes.set(index, DEFAULT_ITEM_HEIGHT);
         return { ...state, data: newData, itemSizes: newItemSizes };
@@ -208,19 +211,15 @@ const VirtProvider = ({ children, ...props }: any) => {
   const { messages: chatMessages } = useChat();
   // --- INTEGRATION: Sync internal state when chat messages change ---
   useEffect(() => {
-    dispatch({
-      type: "SET_DATA",
-      payload: chatMessages
-        .map((ele, index) => {
-          return {
-            index: String(chatMessages.length - index - 1),
-            role: ele.role,
-            content: ele.content,
-            ...ele,
-          };
-        })
-        .reverse(),
-    });
+    const messagesList = chatMessages
+      .map((ele, index) => {
+        return {
+          index: String(chatMessages.length - index - 1),
+          ...ele,
+        };
+      })
+      .reverse();
+    dispatch({ type: "SET_DATA", payload: messagesList });
     dispatch({ type: "RECALCULATE_VIRTUAL_STATE" });
   }, [chatMessages]);
   useEffect(() => {

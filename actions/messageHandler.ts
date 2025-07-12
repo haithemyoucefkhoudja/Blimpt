@@ -3,11 +3,10 @@
 // import { chats, messages as messagesSchema } from '../db/schema';
 // import { eq, } from 'drizzle-orm';
 
-// import { getFileDetails } from '../utils/files';
-import MetaSearchAgent, {
-} from '../search/metaSearchAgent';
-import prompts from '../prompts';
+import prompts from "@/ai/prompts";
+import MetaSearchAgent from "@/ai/search/metaSearchAgent";
 
+// import { getFileDetails } from '../utils/files';
 
 export const searchHandlers = {
   webSearch: new MetaSearchAgent({
@@ -20,7 +19,7 @@ export const searchHandlers = {
     summarizer: true,
   }),
   academicSearch: new MetaSearchAgent({
-    activeEngines: ['arxiv', 'google scholar', 'pubmed'],
+    activeEngines: ["arxiv", "google scholar", "pubmed"],
     queryGeneratorPrompt: prompts.academicSearchRetrieverPrompt,
     responsePrompt: prompts.academicSearchResponsePrompt,
     rerank: true,
@@ -30,7 +29,7 @@ export const searchHandlers = {
   }),
   writingAssistant: new MetaSearchAgent({
     activeEngines: [],
-    queryGeneratorPrompt: '',
+    queryGeneratorPrompt: "",
     responsePrompt: prompts.writingAssistantPrompt,
     rerank: true,
     rerankThreshold: 0,
@@ -38,7 +37,7 @@ export const searchHandlers = {
     summarizer: false,
   }),
   wolframAlphaSearch: new MetaSearchAgent({
-    activeEngines: ['wolframalpha'],
+    activeEngines: ["wolframalpha"],
     queryGeneratorPrompt: prompts.wolframAlphaSearchRetrieverPrompt,
     responsePrompt: prompts.wolframAlphaSearchResponsePrompt,
     rerank: false,
@@ -47,7 +46,7 @@ export const searchHandlers = {
     summarizer: false,
   }),
   youtubeSearch: new MetaSearchAgent({
-    activeEngines: ['youtube'],
+    activeEngines: ["youtube"],
     queryGeneratorPrompt: prompts.youtubeSearchRetrieverPrompt,
     responsePrompt: prompts.youtubeSearchResponsePrompt,
     rerank: true,
@@ -56,7 +55,7 @@ export const searchHandlers = {
     summarizer: false,
   }),
   redditSearch: new MetaSearchAgent({
-    activeEngines: ['reddit'],
+    activeEngines: ["reddit"],
     queryGeneratorPrompt: prompts.redditSearchRetrieverPrompt,
     responsePrompt: prompts.redditSearchResponsePrompt,
     rerank: true,
@@ -96,7 +95,7 @@ export const searchHandlers = {
 
 //     // Final save on end
 //     yield { type: 'messageEnd', messageId };
-    
+
 //     await db.insert(messagesSchema).values({
 //       content: receivedMessage,
 //       chatId,
@@ -142,8 +141,8 @@ export const searchHandlers = {
 //       return;
 //     }
 
-//     const history: BaseMessage[] = parsedWSMessage.history.map(msg => 
-//       msg[0] === 'human' 
+//     const history: BaseMessage[] = parsedWSMessage.history.map(msg =>
+//       msg[0] === 'human'
 //         ? new HumanMessage({ content: msg[1] })
 //         : new AIMessage({ content: msg[1] })
 //     );

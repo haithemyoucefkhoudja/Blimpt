@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { AlertCircle, CheckCircle, Download, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { MarkdownMessage } from "../ui/react-markdown";
+import { useQuery } from "@tanstack/react-query";
 
 interface UpdateInfo {
   version: string;
@@ -21,41 +22,43 @@ interface UpdateInfo {
   body: string;
 }
 
+const checkForUpdates = async (): Promise<UpdateInfo | null> => {
+  try {
+    const { check } = await import("@tauri-apps/plugin-updater");
+    const update = await check();
+    if (update) {
+      return {
+        version: update.version,
+        date: update.date,
+        body: update.body,
+      };
+    }
+    return null;
+  } catch (err) {
+    console.error("Error checking for updates:", err);
+    throw new Error("Failed to check for updates. Please try again later.");
+  }
+};
+
 const UpdaterSection = () => {
-  const [checking, setChecking] = useState(false);
-  const [updateAvailable, setUpdateAvailable] = useState<UpdateInfo | null>(
-    null
-  );
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadComplete, setDownloadComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const checkForUpdates = async () => {
-    setChecking(true);
-    setError(null);
-
-    try {
-      // Import dynamically to prevent errors in non-Tauri environments
-      const { check } = await import("@tauri-apps/plugin-updater");
-      const update = await check();
-
-      if (update) {
-        setUpdateAvailable({
-          version: update.version,
-          date: update.date,
-          body: update.body,
-        });
-      } else {
-        setUpdateAvailable(null);
-      }
-    } catch (err) {
-      console.error("Error checking for updates:", err);
-      setError("Failed to check for updates. Please try again later.");
-    } finally {
-      setChecking(false);
-    }
-  };
+  const {
+    data: updateAvailable,
+    error: queryError,
+    isLoading: checking,
+    refetch,
+  } = useQuery<UpdateInfo | null>({
+    queryKey: ["updater"],
+    queryFn: checkForUpdates,
+    refetchInterval: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+  });
 
   const downloadAndInstallUpdate = async () => {
     if (!updateAvailable) return;
@@ -106,11 +109,6 @@ const UpdaterSection = () => {
     }
   };
 
-  // Check for updates when component mounts
-  // useEffect(() => {
-  //   checkForUpdates();
-  // }, []);
-
   return (
     <Card className="w-full mt-6 border-0 bg-background shadow-none">
       <CardHeader>
@@ -120,11 +118,13 @@ const UpdaterSection = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
+        {(error || queryError) && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {error || (queryError as Error)?.message}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -135,7 +135,7 @@ const UpdaterSection = () => {
               <AlertTitle>Update Available</AlertTitle>
               <AlertDescription>
                 Version {updateAvailable.version} is available (released on{" "}
-                {updateAvailable.date})
+                {new Date(updateAvailable.date).toLocaleDateString()})
               </AlertDescription>
             </Alert>
 
@@ -184,7 +184,7 @@ const UpdaterSection = () => {
       <CardFooter className="flex flex-col space-y-2 items-start">
         <Button
           variant="outline"
-          onClick={checkForUpdates}
+          onClick={() => refetch()}
           disabled={checking || downloading}
         >
           <RefreshCw

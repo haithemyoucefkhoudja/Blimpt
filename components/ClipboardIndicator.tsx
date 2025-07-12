@@ -10,14 +10,13 @@ import {
   XIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { TClipBoard } from "@/types/attachment";
-import { ScrollArea, ScrollBar } from "./ui/scroll-area";
+import type { TAttachment } from "@/types/attachment";
 import { cn } from "@/lib/utils";
 
 const MAX_CLIPBOARD_ITEMS = 30;
 
 interface ClipboardIndicatorProps {
-  clipboardItems: TClipBoard[];
+  clipboardItems: TAttachment[];
   addClipboardItem: (item: string) => void;
   removeClipboardItem: (index: number) => void;
   clearAllClipboardItems: () => void;

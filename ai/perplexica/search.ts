@@ -15,25 +15,48 @@ import { TAttachment } from "@/types/attachment";
 
 // Add this utility function to convert EventEmitter to AsyncIterator
 export function on(emitter: EventEmitter, event: string) {
-  const buffer: any[] = [];
-  let resolve: (value: any) => void;
-  let promise = new Promise((r) => (resolve = r));
+  const queue: any[] = [];
+  const resolvers: ((value: IteratorResult<any>) => void)[] = [];
+  let finished = false;
 
-  emitter.on(event, (data: any) => {
-    buffer.push(data);
-    resolve(buffer.shift());
-    promise = new Promise((r) => (resolve = r));
-  });
+  const listener = (data: any) => {
+    if (resolvers.length > 0) {
+      resolvers.shift()!({ value: data, done: false });
+    } else {
+      queue.push(data);
+    }
+  };
+
+  const endListener = () => {
+    if (resolvers.length > 0) {
+      resolvers.shift()!({ value: undefined, done: true });
+    }
+    finished = true;
+  };
+
+  emitter.on(event, listener);
+  emitter.on("end", endListener); // Listen for the 'end' event
 
   return {
     [Symbol.asyncIterator]() {
-      return {
-        next() {
-          return buffer.length > 0
-            ? Promise.resolve({ value: buffer.shift(), done: false })
-            : promise.then((value) => ({ value, done: false }));
-        },
-      };
+      return this;
+    },
+    next() {
+      return new Promise((resolve) => {
+        if (queue.length > 0) {
+          resolve({ value: queue.shift(), done: false });
+        } else if (finished) {
+          resolve({ value: undefined, done: true });
+        } else {
+          resolvers.push(resolve);
+        }
+      });
+    },
+    return() {
+      // Clean up listeners when the consumer stops listening
+      emitter.removeListener(event, listener);
+      emitter.removeListener("end", endListener);
+      return Promise.resolve({ done: true });
     },
   };
 }
@@ -72,11 +95,13 @@ async function* streamSearchResponse(
   try {
     for await (const event of on(emitter, "data")) {
       const parsedData = JSON.parse(event);
+      if (parsedData.type === "end") {
+        yield { type: "end", message, sources };
+        break;
+      }
       if (parsedData.type === "response") {
         if (!parsedData.data && message.length > 0) break;
-
         message += parsedData.data;
-
         yield { type: "message", data: parsedData.data };
       } else if (parsedData.type == "reasoning") {
         reasoning_content += parsedData.data;
@@ -84,11 +109,15 @@ async function* streamSearchResponse(
       } else if (parsedData.type === "sources") {
         sources = parsedData.data;
         yield { type: "sources", data: parsedData.data };
+      } else if (parsedData.type === "action") {
+        console.log("action", parsedData.data);
+        yield { type: "action", data: parsedData.data };
       } else if (parsedData.type === "error") {
         yield { type: "error", data: parsedData.data };
         break;
       }
     }
+    console.log("End stream");
     yield { type: "end", message, sources };
   } catch (error) {
     yield {
@@ -181,9 +210,9 @@ export async function* handleChatRequest(body: ChatRequestBody) {
     }
 
     const history = body.history.map((msg) => {
-      if (msg[0] === "human") {
+      if (msg[0] === "user") {
         return new HumanMessage({ content: msg[1] });
-      } else if (msg[0] === "ai") {
+      } else if (msg[0] === "assistant") {
         return new AIMessage({ content: msg[1] });
       } else {
         throw new Error("Unknown message type in history");
@@ -201,6 +230,10 @@ export async function* handleChatRequest(body: ChatRequestBody) {
       body.attachments
     );
   } catch (error: any) {
-    throw error;
+    console.error("Error streaming response: " + error.message);
+    yield {
+      type: "error",
+      data: error.message,
+    };
   }
 }

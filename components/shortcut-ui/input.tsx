@@ -18,6 +18,7 @@ import { useChat } from "@/providers/chat-provider";
 import { StopIcon } from "@radix-ui/react-icons";
 import { useInput } from "@/providers/chat-provider";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
+import { readFileAsBase64 } from "@/lib/readFileAsBase64";
 
 export const ChatInput = memo(function ChatInput() {
   const { isLoading, handleFormSubmit } = useChat();
@@ -41,17 +42,27 @@ export const ChatInput = memo(function ChatInput() {
       e.preventDefault();
       const clipboardItems = await navigator.clipboard.read();
       for (const item of clipboardItems) {
-        console.log("item.types:", item.types);
         if (item.types.some((type) => type.includes("image"))) {
           const type = item.types.find((type) => type.includes("image"));
           const blob = await item.getType(type);
+          const file = new File(
+            [blob],
+            `clipboard-image.${type.split("/")[1]}`,
+            {
+              type: `image/${type.split("/")[1]}`,
+            }
+          );
+          const base64 = await readFileAsBase64(file).then((base64) => base64);
           addAttachment({
             id: `clipboard-image-${Date.now()}`,
-            file: new File([blob], `clipboard-image.${type.split("/")[1]}`, {
+            metadata: {
+              name: `clipboard-image.${type.split("/")[1]}`,
               type: `image/${type.split("/")[1]}`,
-            }),
+              size: blob.size,
+              lastModified: Date.now(),
+            },
             type: "image",
-            previewUrl: URL.createObjectURL(blob),
+            base64: `data:${file.type};base64,${base64}`,
           });
           break;
         }
@@ -64,6 +75,7 @@ export const ChatInput = memo(function ChatInput() {
               .substring(7)}`,
             text,
             type: "text",
+            base64: "",
           });
           break;
         }
@@ -97,10 +109,10 @@ export const ChatInput = memo(function ChatInput() {
                       )}
                     >
                       <div className="w-10 h-10 flex items-center justify-center mb-1 overflow-hidden rounded-md ">
-                        {item.previewUrl ? (
+                        {item.base64 ? (
                           <img
-                            src={item.previewUrl}
-                            alt={item.file?.name}
+                            src={item.base64}
+                            alt={item.metadata?.name}
                             className="w-full h-full object-cover cursor-pointer transition-transform duration-200 group-hover:scale-105"
                           />
                         ) : (
@@ -125,7 +137,7 @@ export const ChatInput = memo(function ChatInput() {
                         )}
                         onClick={() => removeAttachment(item.id)}
                         disabled={isLoading.state}
-                        aria-label={`Remove ${item.file?.name}`}
+                        aria-label={`Remove ${item.metadata?.name}`}
                       >
                         <XIcon className="h-3 w-3" />
                       </Button>
@@ -197,16 +209,18 @@ export const ChatInput = memo(function ChatInput() {
 });
 
 const Buttons = memo(function Buttons() {
-  const { config, isDeepThinking, setIsDeepThinking, isSearch, setIsSearch } =
-    useConfig();
+  const {
+    config,
+    isDeepThinking,
+    setIsDeepThinking,
+    isSearch,
+    setIsSearch,
+    port,
+  } = useConfig();
   const models = useMemo(() => config.models, [config.models]);
   const { isLoading } = useChat();
   const { searchMode, setSearchMode, fileInputRef } = useInput();
   const isImage = useMemo(() => {
-    console.log(
-      "config.selectedDeepThinkingModel:",
-      config.selectedDeepThinkingModel
-    );
     console.log("config.selectedModel:", config.selectedModel);
 
     if (isDeepThinking) {
@@ -251,7 +265,7 @@ const Buttons = memo(function Buttons() {
       <Button
         onClick={setIsSearch}
         type="button"
-        disabled={isLoading.state}
+        disabled={isLoading.state || !port}
         variant={isSearch ? "default" : "outline"}
         className={cn(
           "relative rounded-full h-8 p-2",

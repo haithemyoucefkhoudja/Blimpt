@@ -34,11 +34,14 @@ const defaultConfig: Config = {
     { name: "MISTRAL", apiKey: "" },
     { name: "OLLAMA", apiKey: "", baseUrl: "" },
   ],
+  APP_SHORTCUT: "CommandOrControl+Shift+Y",
+  SCREENSHOT_SHORTCUT: "CommandOrControl+Shift+S",
   API_ENDPOINTS: { OLLAMA: "" },
   MAX_TOKENS,
   models: defaultModels,
   selectedModel: defaultModels[0],
   selectedDeepThinkingModel: defaultModels[1],
+  OUTPUT_DELAY: 10,
 };
 export {
   CLOSE_DELAY,

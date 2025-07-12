@@ -55,7 +55,6 @@ export async function* handleChatRequestNoSearch(body: ChatRequestBody) {
         return new AIMessage({ content: msg[1] });
       }
     });
-    console.log("func:", llm);
 
     const query = new HumanMessage({
       content: [
@@ -65,7 +64,7 @@ export async function* handleChatRequestNoSearch(body: ChatRequestBody) {
             case "image":
               return {
                 type: "image_url",
-                image_url: `data:${item.file.type};base64,${item.base64}`,
+                image_url: { url: item.base64 },
               };
             case "text":
               return {
@@ -93,7 +92,7 @@ export async function* handleChatRequestNoSearch(body: ChatRequestBody) {
     let isFirst = true;
 
     for await (const chunk of stream) {
-      // console.log('chunk:', chunk)
+      process.env.NODE_ENV == "development" && console.log("chunk:", chunk);
       const reasoning_content = chunk.additional_kwargs
         ?.reasoning_content as string;
       const llm_content = chunk.content as string;

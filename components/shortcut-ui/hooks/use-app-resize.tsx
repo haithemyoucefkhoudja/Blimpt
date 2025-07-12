@@ -14,7 +14,13 @@ import {
 import { MAX_HEIGHT, MAX_WIDTH, WIDTH_OFFSET } from "@/utils/constants";
 import { getCurrentWindow, PhysicalSize } from "@tauri-apps/api/window";
 
-type WindowType = "chat" | "list" | "commands" | "settings" | "history";
+type WindowType =
+  | "chat"
+  | "list"
+  | "commands"
+  | "settings"
+  | "history"
+  | "donation";
 
 type AppResizeContextType = {
   ActiveWindow: WindowType;

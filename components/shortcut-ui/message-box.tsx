@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/Message";
 import {
+  AlertCircle,
   BookCopy,
   FileIcon,
   Layers3,
@@ -22,6 +23,7 @@ const MessageBox = memo(function MessageBox({
   message,
   messageIndex,
   rewrite,
+  type,
 }: // sendMessage,
 {
   message: Message;
@@ -83,7 +85,7 @@ const MessageBox = memo(function MessageBox({
             {/* <div className="flex space-x-3 overflow-x-auto scrollbar-thin scrollbar-thumb-border hover:scrollbar-thumb-accent pb-2">
              */}
             <ScrollArea
-              className={cn(message.attachments.length > 0 && "py-2")}
+              className={cn("px-3", message.attachments.length > 0 && "py-2")}
             >
               <ScrollBar orientation="horizontal" />
               <div
@@ -103,10 +105,10 @@ const MessageBox = memo(function MessageBox({
                       )}
                     >
                       <div className="w-10 h-10 flex items-center justify-center mb-1 overflow-hidden rounded-md ">
-                        {item.previewUrl ? (
+                        {item.base64 ? (
                           <img
-                            src={item.previewUrl}
-                            alt={item.file?.name}
+                            src={item.base64}
+                            alt={item.metadata?.name}
                             className="w-full h-full object-cover cursor-pointer transition-transform duration-200 group-hover:scale-105"
                           />
                         ) : (
@@ -138,12 +140,28 @@ const MessageBox = memo(function MessageBox({
       {message.role === "assistant" && (
         <div
           data-tauri-drag-region
-          className="flex flex-col space-y-9 lg:space-y-0 lg:flex-row lg:justify-between w-full lg:space-x-9"
+          className="flex flex-col space-y-9 lg:space-y-0 lg:flex-row lg:justify-between w-full lg:space-x-9 px-3"
         >
           <div
             data-tauri-drag-region
             className="flex flex-col space-y-6 w-full"
           >
+            {message.action && (
+              <div data-tauri-drag-region className="flex flex-col space-y-2">
+                <div
+                  data-tauri-drag-region
+                  className="flex flex-row items-center space-x-2"
+                >
+                  <AlertCircle
+                    className="text-black dark:text-white"
+                    size={20}
+                  />
+                  <p className="text-black dark:text-white font-medium text-md">
+                    {message.action}
+                  </p>
+                </div>
+              </div>
+            )}
             {message.sources && message.sources.length > 0 && (
               <div data-tauri-drag-region className="flex flex-col space-y-2">
                 <div
@@ -158,10 +176,14 @@ const MessageBox = memo(function MessageBox({
                 <MessageSources sources={message.sources} />
               </div>
             )}
-            <div data-tauri-drag-region className="flex flex-col space-y-2">
+
+            <div
+              data-tauri-drag-region
+              className="flex flex-col space-y-2 w-full "
+            >
               <div
                 data-tauri-drag-region
-                className="flex flex-row items-center space-x-2"
+                className="flex flex-row items-center space-x-2 px-2"
               >
                 {isLoading ? (
                   <div
@@ -207,7 +229,7 @@ const MessageBox = memo(function MessageBox({
                   {message.id}
                 </span>
               </div>
-              {!isLoading ? (
+              {!isLoading || type === "single" ? (
                 <MarkdownMessage
                   reasoning={message.reasoning}
                   content={parsedMessage}
@@ -224,7 +246,7 @@ const MessageBox = memo(function MessageBox({
                   <p className="break-words text-wrap">{parsedMessage}</p>
                 </div>
               )}
-              {isLoading ? null : (
+              {
                 <div
                   data-tauri-drag-region
                   className="flex flex-row items-center justify-between w-full text-black dark:text-white py-4 -mx-2"
@@ -233,10 +255,14 @@ const MessageBox = memo(function MessageBox({
                     data-tauri-drag-region
                     className="flex flex-row items-center space-x-1"
                   >
-                    <button className="p-2 text-black/70 dark:text-white/70 rounded-xl hover:bg-light-secondary dark:hover:bg-dark-secondary transition duration-200 hover:text-black text-black dark:hover:text-white">
+                    <button
+                      className="p-2 text-black/70 dark:text-white/70 rounded-xl hover:bg-light-secondary dark:hover:bg-dark-secondary transition duration-200 hover:text-black text-black dark:hover:text-white"
+                      disabled={isLoading}
+                    >
                       <Share size={18} />
                     </button>
                     <Rewrite
+                      disabled={isLoading}
                       rewrite={() => {
                         rewrite(message.id);
                       }}
@@ -246,10 +272,14 @@ const MessageBox = memo(function MessageBox({
                     data-tauri-drag-region
                     className="flex flex-row items-center space-x-1"
                   >
-                    <Copy initialMessage={message.content} message={message} />
+                    <Copy
+                      initialMessage={message.content}
+                      message={message}
+                      disabled={isLoading}
+                    />
                   </div>
                 </div>
-              )}
+              }
               {message.suggestions &&
                 message.suggestions.length > 0 &&
                 message.role === "assistant" &&
@@ -273,36 +303,7 @@ const MessageBox = memo(function MessageBox({
                       <div
                         data-tauri-drag-region
                         className="flex flex-col space-y-3"
-                      >
-                        {/* {message.suggestions.map(
-                          (suggestion: string, i: number) => (
-                            <div
-                              data-tauri-drag-region
-                              className="flex flex-col space-y-3 text-sm"
-                              key={i}
-                            >
-                              <div
-                                data-tauri-drag-region
-                                className="h-px w-full bg-light-secondary dark:bg-dark-secondary"
-                              />
-                              <div
-                                onClick={() => {
-                                  sendMessage && sendMessage(suggestion);
-                                }}
-                                className="cursor-pointer flex flex-row justify-between font-medium space-x-2 items-center"
-                              >
-                                <p className="transition duration-200 hover:text-[#24A0ED]">
-                                  {suggestion}
-                                </p>
-                                <Plus
-                                  size={20}
-                                  className="text-[#24A0ED] flex-shrink-0"
-                                />
-                              </div>
-                            </div>
-                          )
-                        )} */}
-                      </div>
+                      ></div>
                     </div>
                   </>
                 )}
