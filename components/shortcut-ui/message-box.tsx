@@ -18,7 +18,8 @@ import { Copy } from "../Copy";
 import Rewrite from "../Rewrite";
 import MessageSources from "./message-sources";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
-
+import { useInput } from "@/providers/chat-provider";
+import { useSearchMode } from "@/providers/chat-provider";
 const MessageBox = memo(function MessageBox({
   message,
   messageIndex,
@@ -28,11 +29,17 @@ const MessageBox = memo(function MessageBox({
 {
   message: Message;
   messageIndex: number;
-  rewrite: (messageId: string) => void;
+  rewrite: (
+    messageId: string,
+    searchMode: string,
+    emptyInput: () => void
+  ) => void;
   type: "list" | "single";
 }) {
   // if (message.role == "user") console.log("user message:", message);
   const isLoading = message.isLoading;
+  const { emptyInput } = useInput();
+  const { searchMode } = useSearchMode();
   const [parsedMessage, setParsedMessage] = useState(message.content);
   useEffect(() => {
     const regex = /\[(\d+)\]/g;
@@ -82,51 +89,51 @@ const MessageBox = memo(function MessageBox({
             </span>
           </div>
           <div className=" flex ">
-            {/* <div className="flex space-x-3 overflow-x-auto scrollbar-thin scrollbar-thumb-border hover:scrollbar-thumb-accent pb-2">
-             */}
-            <ScrollArea
-              className={cn("px-3", message.attachments.length > 0 && "py-2")}
-            >
-              <ScrollBar orientation="horizontal" />
-              <div
-                className={cn(
-                  "flex space-x-3",
-                  message.attachments.length > 0 && ""
-                )}
+            {message.attachments.length > 0 && (
+              <ScrollArea
+                className={cn("px-3", message.attachments.length > 0 && "py-2")}
               >
-                {message.attachments.length > 0 &&
-                  message.attachments.map((item) => (
-                    <div
-                      key={item.id}
-                      className={cn(
-                        "relative group w-20 h-fit flex-shrink-0 p-2 rounded-lg border",
-                        "flex flex-col items-center justify-between",
-                        "bg-card border-border text-card-foreground"
-                      )}
-                    >
-                      <div className="w-10 h-10 flex items-center justify-center mb-1 overflow-hidden rounded-md ">
-                        {item.base64 ? (
-                          <img
-                            src={item.base64}
-                            alt={item.metadata?.name}
-                            className="w-full h-full object-cover cursor-pointer transition-transform duration-200 group-hover:scale-105"
-                          />
-                        ) : (
-                          <FileIcon className="w-10 h-10 text-muted-foreground" />
+                <ScrollBar orientation="horizontal" />
+                <div
+                  className={cn(
+                    "flex space-x-3",
+                    message.attachments.length > 0 && ""
+                  )}
+                >
+                  {message.attachments.length > 0 &&
+                    message.attachments.map((item) => (
+                      <div
+                        key={item.id}
+                        className={cn(
+                          "relative group w-20 h-fit flex-shrink-0 p-2 rounded-lg border",
+                          "flex flex-col items-center justify-between",
+                          "bg-card border-border text-card-foreground"
                         )}
+                      >
+                        <div className="w-10 h-10 flex items-center justify-center mb-1 overflow-hidden rounded-md ">
+                          {item.base64 ? (
+                            <img
+                              src={item.base64}
+                              alt={item.metadata?.name}
+                              className="w-full h-full object-cover cursor-pointer transition-transform duration-200 group-hover:scale-105"
+                            />
+                          ) : (
+                            <FileIcon className="w-10 h-10 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="w-full text-center">
+                          <p
+                            className="text-xs truncate w-full"
+                            title={item.text}
+                          >
+                            {item.text}
+                          </p>
+                        </div>
                       </div>
-                      <div className="w-full text-center">
-                        <p
-                          className="text-xs truncate w-full"
-                          title={item.text}
-                        >
-                          {item.text}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </ScrollArea>
+                    ))}
+                </div>
+              </ScrollArea>
+            )}
           </div>
           <div
             className={cn("w-full", messageIndex === 0 ? "pt-0" : "py-2")}
@@ -140,7 +147,7 @@ const MessageBox = memo(function MessageBox({
       {message.role === "assistant" && (
         <div
           data-tauri-drag-region
-          className="flex flex-col space-y-9 lg:space-y-0 lg:flex-row lg:justify-between w-full lg:space-x-9 px-3"
+          className="flex flex-col space-y-9 lg:space-y-0 lg:flex-row lg:justify-between w-full lg:space-x-9 "
         >
           <div
             data-tauri-drag-region
@@ -264,7 +271,7 @@ const MessageBox = memo(function MessageBox({
                     <Rewrite
                       disabled={isLoading}
                       rewrite={() => {
-                        rewrite(message.id);
+                        rewrite(message.id, searchMode, emptyInput);
                       }}
                     />
                   </div>

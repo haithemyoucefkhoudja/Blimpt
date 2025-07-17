@@ -1,19 +1,20 @@
 import { cn } from "@/lib/utils";
 import { MessageCirclePlus } from "lucide-react";
-import { useChat } from "@/providers/chat-provider";
+import { useChat, useInput } from "@/providers/chat-provider";
 import { Button } from "../ui/button";
 import { useAppResize } from "./hooks/use-app-resize";
 
 function NewChatIndicator() {
   const { ActiveWindow, setActiveWindow } = useAppResize();
   const { isLoading, newChatStarter } = useChat();
+  const { emptyInput } = useInput();
   const handleClick = () => {
     if (isLoading.state) return;
 
     if (ActiveWindow !== "chat") {
       setActiveWindow("chat");
     }
-    newChatStarter();
+    newChatStarter(emptyInput);
   };
   return (
     <Button

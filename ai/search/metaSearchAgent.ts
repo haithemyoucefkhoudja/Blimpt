@@ -41,46 +41,13 @@ interface Config {
   responsePrompt: string;
   activeEngines: string[];
 }
-type BasicChainInput = { chat_history: BaseMessage[]; query: string };
+type BasicChainInput = { chat_history: BaseMessage[]; query: HumanMessage };
 class MetaSearchAgent implements MetaSearchAgentType {
   private config: Config;
   private strParser = new StringOutputParser();
   private emitter = new EventEmitter();
   constructor(config: Config) {
     this.config = config;
-  }
-  private async createImageDescriptionChain(llm: BaseChatModel) {
-    return RunnableSequence.from([
-      RunnableMap.from({
-        images: (input: { attachments: TAttachment[] }) => {
-          return input.attachments
-            .filter((att) => att.type === "image")
-            .map((att) => ({
-              type: "image_url",
-              image_url: { url: att.base64 },
-            }));
-        },
-      }),
-      RunnableLambda.from((input) => {
-        if (input.images.length === 0) {
-          return "No images to describe.";
-        }
-        return ChatPromptTemplate.fromMessages([
-          [
-            "human",
-            [
-              {
-                type: "text",
-                text: "Describe the following image(s) in detail. Focus on the key objects, scenes, and any text present. This description will be used to generate a web search query, so be factual and descriptive.",
-              },
-              ...input.images,
-            ],
-          ],
-        ]);
-      }),
-      llm,
-      this.strParser,
-    ]);
   }
   private async createSearchRetrieverChain(llm: BaseChatModel, port: string) {
     process.env.NODE_ENV == "development" &&
@@ -90,11 +57,19 @@ class MetaSearchAgent implements MetaSearchAgentType {
       ChatPromptTemplate.fromMessages([
         ["system", this.config.queryGeneratorPrompt],
         new MessagesPlaceholder("chat_history"),
-        ["user", "{query}"],
+        new MessagesPlaceholder("query"),
       ]),
-      llm,
+      async (input) => {
+        console.log("Search retriever chain input LLM:", input);
+        return await llm.invoke(input);
+      },
       this.strParser,
       RunnableLambda.from(async (input: string) => {
+        console.log(
+          "Search  chain input:",
+          input,
+          process.env.NODE_ENV == "development"
+        );
         process.env.NODE_ENV == "development" &&
           console.log("Search retriever chain input:", input);
         try {
@@ -254,77 +229,44 @@ class MetaSearchAgent implements MetaSearchAgentType {
       }),
     ]);
   }
-  private async createAnsweringChain(
-    llm: BaseChatModel,
-    port: string,
-    attachments: TAttachment[],
-    embeddings: Embeddings | undefined,
-    optimizationMode: "speed" | "balanced" | "quality"
-  ) {
+  private async createAnsweringChain(llm: BaseChatModel, port: string) {
     process.env.NODE_ENV == "development" &&
       console.log("Creating answering chain...");
-    const imageDescriptionChain = await this.createImageDescriptionChain(llm);
     const searchRetrieverChain = await this.createSearchRetrieverChain(
       llm,
       port
     );
+
+    this.emitter.emit(
+      "data",
+      JSON.stringify({
+        type: "action",
+        data: "Building answer...",
+      })
+    );
     const contextRetriever = RunnableLambda.from(
       async (input: BasicChainInput) => {
-        const { query: originalQuery, chat_history: originalHistory } = input;
+        const { query, chat_history } = input;
+        console.log("Query:", query);
         let docs: Document[] | null = null;
-        let queryForSearch = originalQuery;
         if (this.config.searchWeb) {
-          let imageDescriptions = "";
-          const imageAttachments = attachments.filter(
-            (att) => att.type === "image"
-          );
-          if (imageAttachments.length > 0) {
-            process.env.NODE_ENV == "development" &&
-              console.log("Generating image descriptions...");
-            this.emitter.emit(
-              "data",
-              JSON.stringify({ type: "action", data: "Analyzing images..." })
-            );
-            imageDescriptions = await imageDescriptionChain.invoke({
-              attachments,
-            });
-            process.env.NODE_ENV == "development" &&
-              console.log("Image descriptions:", imageDescriptions);
-          }
-          queryForSearch = `${originalQuery} ${imageDescriptions}`.trim();
-          const textOnlyHistory = originalHistory.map((msg) => {
-            if (Array.isArray(msg.content)) {
-              const newContent = msg.content
-                .filter((part) => part.type === "text")
-                .map((part) => (part as any).text)
-                .join(" ");
-              if (msg instanceof HumanMessage) {
-                return new HumanMessage(newContent);
-              }
-              if (msg instanceof AIMessage) {
-                return new AIMessage(newContent);
-              }
-            }
-            return msg;
-          });
           process.env.NODE_ENV == "development" &&
-            console.log("Generating search query with:", queryForSearch);
+            console.log("Generating search query with:", query);
           const searchRetrieverResult = await searchRetrieverChain.invoke({
-            chat_history: textOnlyHistory,
-            query: queryForSearch,
+            chat_history,
+            query,
           });
-          const finalQuery = searchRetrieverResult.query || queryForSearch;
           docs = searchRetrieverResult.docs;
           return {
-            query: finalQuery,
+            query,
             docs: docs ?? [],
-            chat_history: originalHistory,
+            chat_history,
           };
         }
         return {
-          query: originalQuery,
+          query,
           docs: [],
-          chat_history: originalHistory,
+          chat_history,
         };
       }
     ).withConfig({ runName: "FinalSourceRetriever" });
@@ -339,28 +281,7 @@ class MetaSearchAgent implements MetaSearchAgentType {
       ChatPromptTemplate.fromMessages([
         ["system", this.config.responsePrompt],
         new MessagesPlaceholder("chat_history"),
-        [
-          "user",
-          [
-            { type: "text", text: "{query}" },
-            ...((attachments as TAttachment[]) || []).map((item) => {
-              switch (item.type) {
-                case "image":
-                  process.env.NODE_ENV == "development" &&
-                    console.log("Image attachment:", item);
-                  return { type: "image_url", image_url: { url: item.base64 } };
-                case "text":
-                  process.env.NODE_ENV == "development" &&
-                    console.log("Text attachment:", item);
-                  return { type: "text", text: item.text };
-                default:
-                  process.env.NODE_ENV == "development" &&
-                    console.log("Unsupported attachment:", item);
-                  return { type: "text", text: "Unsupported attachment type" };
-              }
-            }),
-          ],
-        ],
+        new MessagesPlaceholder("query"),
       ]),
       llm,
       this.strParser,
@@ -390,7 +311,6 @@ class MetaSearchAgent implements MetaSearchAgentType {
           event.event === "on_chain_end" &&
           event.name === "FinalSourceRetriever"
         ) {
-          console.log("FinalSourceRetriever chain ended:", event.data.output);
           emitter.emit(
             "data",
             JSON.stringify({
@@ -459,15 +379,32 @@ class MetaSearchAgent implements MetaSearchAgentType {
         port,
         attachments,
       });
-    const answeringChain = await this.createAnsweringChain(
-      llm,
-      port,
-      attachments,
-      embeddings,
-      optimizationMode
-    );
+    const answeringChain = await this.createAnsweringChain(llm, port);
     const stream = answeringChain.streamEvents(
-      { chat_history: history, query: message },
+      {
+        chat_history: history,
+        query: new HumanMessage({
+          content: [
+            { type: "text", text: message },
+            ...attachments.map((attachment) => {
+              switch (attachment.type) {
+                case "image":
+                  return {
+                    type: "image_url",
+                    image_url: { url: attachment.base64 },
+                  };
+                case "text":
+                  return { type: "text", text: attachment.text };
+                default:
+                  return {
+                    type: "text",
+                    text: "Unsupported attachment type",
+                  };
+              }
+            }),
+          ],
+        }),
+      },
       { version: "v1" }
     );
     this.handleStream(stream, this.emitter);

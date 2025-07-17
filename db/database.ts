@@ -69,7 +69,6 @@ export async function storeMessage(
 
   // If conversation_id is not provided, insert new conversation
   let conversationId = message.conversation_id;
-
   if (!conversationId) {
     const result = await db.execute(
       "INSERT INTO conversations (title, timestamp) VALUES ($1, $2)",

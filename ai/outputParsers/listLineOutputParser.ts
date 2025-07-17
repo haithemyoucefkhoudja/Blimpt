@@ -1,11 +1,11 @@
-import { BaseOutputParser } from '@langchain/core/output_parsers';
+import { BaseOutputParser } from "@langchain/core/output_parsers";
 
 interface LineListOutputParserArgs {
   key?: string;
 }
 
 class LineListOutputParser extends BaseOutputParser<string[]> {
-  private key = 'questions';
+  private key = "questions";
 
   constructor(args?: LineListOutputParserArgs) {
     super();
@@ -13,13 +13,14 @@ class LineListOutputParser extends BaseOutputParser<string[]> {
   }
 
   static lc_name() {
-    return 'LineListOutputParser';
+    return "LineListOutputParser";
   }
 
-  lc_namespace = ['langchain', 'output_parsers', 'line_list_output_parser'];
+  lc_namespace = ["langchain", "output_parsers", "line_list_output_parser"];
 
   async parse(text: string): Promise<string[]> {
-    text = text.trim() || '';
+    console.log("LineListOutputParser parse input:", text);
+    text = text.trim() || "";
 
     const regex = /^(\s*(-|\*|\d+\.\s|\d+\)\s|\u2022)\s*)+/;
     const startKeyIndex = text.indexOf(`<${this.key}>`);
@@ -35,15 +36,15 @@ class LineListOutputParser extends BaseOutputParser<string[]> {
     const lines = text
       .slice(questionsStartIndex, questionsEndIndex)
       .trim()
-      .split('\n')
-      .filter((line) => line.trim() !== '')
-      .map((line) => line.replace(regex, ''));
+      .split("\n")
+      .filter((line) => line.trim() !== "")
+      .map((line) => line.replace(regex, ""));
 
     return lines;
   }
 
   getFormatInstructions(): string {
-    throw new Error('Not implemented.');
+    throw new Error("Not implemented.");
   }
 }
 

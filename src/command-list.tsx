@@ -12,7 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ListScrollArea } from "@/components/ui/list-scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle,
@@ -22,15 +21,13 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  useAppResize,
-  useSizeChange,
-} from "@/components/shortcut-ui/hooks/use-app-resize";
+
 import OnlineStatusIndicator from "@/components/ui/on-indicator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CHECKSEARXNG_TIMOUT } from "@/utils/constants";
 import { useConfig } from "@/providers/config-provider";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useDockerMessage } from "@/providers/chat-provider";
 
 type Status = "idle" | "checking" | "installing" | "port" | "error" | "done";
 type Step =
@@ -66,17 +63,13 @@ function DockerRequirementsLink() {
 }
 const DOCKER_TIMOUT = 60;
 export function CommandControl() {
-  const { setActiveWindow } = useAppResize();
-
   const [dockerInstalled, setDockerInstalled] = useState<boolean | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [currentStep, setCurrentStep] = useState<Step>("check_docker");
   const currentStepRef = useRef<Step>("check_docker");
-  const [message, setMessage] = useState("Docker TimedOut");
+  const { updateDockerMessage, dockerMessage } = useDockerMessage();
   const { port, setPort } = useConfig();
   const [dockerStartTimeout, setDockerStartTimeout] = useState(DOCKER_TIMOUT);
-
-  useSizeChange(() => {}, [message]);
 
   useEffect(() => {
     currentStepRef.current = currentStep;
@@ -85,7 +78,7 @@ export function CommandControl() {
     if (dockerStartTimeout <= 0) {
       setDockerStartTimeout(DOCKER_TIMOUT);
       setStatus("error");
-      setMessage("Docker TimedOut");
+      updateDockerMessage("Docker TimedOut");
     }
   }, [dockerStartTimeout]);
 
@@ -101,11 +94,11 @@ export function CommandControl() {
           if (!port) {
             setStatus("idle");
             setCurrentStep("check_docker");
-            setMessage("");
+            updateDockerMessage("");
           } else {
             setPort(port);
             setStatus("done");
-            setMessage("SearXNG is running on port: " + port);
+            updateDockerMessage("SearXNG is running on port: " + port);
             setCurrentStep("done_searxng");
           }
         })
@@ -128,14 +121,14 @@ export function CommandControl() {
         event: "docker-run",
         handler: (event: any) => {
           setCurrentStep("wait_docker");
-          setMessage(event.payload as string);
+          updateDockerMessage(event.payload as string);
         },
       },
       {
         event: "searxng-check",
         handler: (event: any) => {
           setCurrentStep("check_searxng");
-          setMessage(event.payload as string);
+          updateDockerMessage(event.payload as string);
         },
       },
       {
@@ -143,7 +136,7 @@ export function CommandControl() {
         handler: (event: any) => {
           setCurrentStep("run_searxng");
           setStatus("port");
-          setMessage(event.payload as string);
+          updateDockerMessage(event.payload as string);
         },
       },
       {
@@ -151,7 +144,7 @@ export function CommandControl() {
         handler: (event: any) => {
           setCurrentStep("done_searxng");
           setStatus("done");
-          setMessage(
+          updateDockerMessage(
             ("SearXNG is running on port: " + event.payload) as string
           );
           setPort(event.payload as string);
@@ -161,7 +154,7 @@ export function CommandControl() {
         event: "error",
         handler: (event: any) => {
           setStatus("error");
-          setMessage(event.payload as string);
+          updateDockerMessage(event.payload as string);
         },
       },
     ];
@@ -195,7 +188,7 @@ export function CommandControl() {
       await invoke("start_setup");
     } catch (error) {
       setStatus("error");
-      setMessage(error as string);
+      updateDockerMessage(error as string);
     }
   };
 
@@ -303,7 +296,7 @@ export function CommandControl() {
             <Alert className="mb-4 flex  items-center">
               <AlertCircle className="h-4 w-4" color="red" />
               <AlertDescription className="flex justify-between space-y-2 flex-col items-center">
-                <span className="text-sm text-red-500">{message}</span>
+                <span className="text-sm text-red-500">{dockerMessage}</span>
               </AlertDescription>
             </Alert>
           ) : (
@@ -339,9 +332,9 @@ export function CommandControl() {
                   {index < steps.length - 2 && <Separator className="w-full" />}
                 </div>
               ))}
-              {message && (
+              {dockerMessage && (
                 <p className="text-sm text-muted-foreground mt-2 italic">
-                  {message}
+                  {dockerMessage}
                 </p>
               )}
             </div>

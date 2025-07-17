@@ -1,21 +1,113 @@
 export const redditSearchRetrieverPrompt = `
-You will be given a conversation below and a follow up question. You need to rephrase the follow-up question if needed so it is a standalone question that can be used by the LLM to search the web for information.
-If it is a writing task or a simple hi, hello rather than a question, you need to return \`not_needed\` as the response.
+You will be given a conversation and a follow-up question. Your task is to rephrase the follow-up question so that it becomes a clear, standalone question that can be used by a language model (LLM) to search the web for information. The question should be reworded in a way that includes all necessary context from the conversation and user input, without referring to the original conversation or to the follow-up nature of the question.
 
-Example:
-1. Follow up question: Which company is most likely to create an AGI
-Rephrased: Which company is most likely to create an AGI
+If the follow-up is a writing task or a simple greeting (such as “Hi”, “Hello”, “How are you?”, etc.) that does not require external information or search, return the following block:
+<question>
+not_needed
+</question>
 
-2. Follow up question: Is Earth flat?
-Rephrased: Is Earth flat?
+If the follow-up references a URL and asks a question about it, return:
+<question>
+[rephrased standalone question]
+</question>
+<links>
+[URL]
+</links>
 
-3. Follow up question: Is there life on Mars?
-Rephrased: Is there life on Mars?
+If the follow-up asks to summarize content from a webpage or PDF, return:
+<question>
+summarize
+</question>
+<links>
+[URL]
+</links>
 
-Conversation:
-{chat_history}
+If the follow-up includes an image:
 
-Follow up question: {query}
+If the content of the image is recognized, combine the user’s message and what is seen in the image to create a standalone question. Do not reference the image itself in the question. For example, if the image shows a flamingo and the user says “What bird is this?”, rephrase the question to:
+
+<question>
+What kind of bird is a flamingo?
+</question>
+
+If the content of the image is not recognized, describe the image briefly and incorporate that into a clear, searchable question. For example, if the image shows an unknown metal object and the user asks what it is, rephrase to something like:
+
+<question>
+What is a metal tool with a curved grip and rotating head used for?
+</question>
+
+Only include the <links> block if the follow-up includes a URL. Always include the rephrased question inside a <question> XML block.
+
+Examples:
+
+Follow-up question: Which company is most likely to create an AGI
+
+<question>
+Which company is most likely to create an AGI
+</question>
+
+Follow-up question: Is Earth flat?
+
+<question>
+Is Earth flat?
+</question>
+
+Follow-up question: Is there life on Mars?
+
+<question>
+Is there life on Mars?
+</question>
+
+Follow-up question: Hi there
+
+<question>
+not_needed
+</question>
+
+Follow-up question: Can you tell me what is X from https://example.com
+
+<question>
+Can you tell me what is X?
+</question>
+<links>
+https://example.com
+</links>
+
+Follow-up question: Summarize the content from https://example.com
+
+<question>
+summarize
+</question>
+<links>
+https://example.com
+</links>
+
+Follow-up question: <<ImageDisplayed>> What kind of bird is this? (AI recognizes flamingo)
+
+<question>
+What kind of bird is a flamingo?
+</question>
+
+Follow-up question: <<ImageDisplayed>> Where can I buy this jacket? (Image shows black jacket with fur-lined hood, but model unknown)
+
+<question>
+Where can I buy a black winter jacket with a fur-lined hood like the one shown?
+</question>
+
+Follow-up question: <<ImageDisplayed>> What does this warning label mean? (AI recognizes electrical hazard symbol)
+
+<question>
+What does an electrical hazard warning symbol mean?
+</question>
+
+Follow-up question: <<ImageDisplayed>> What is this object used for? (AI does not recognize object; it's a metallic tool with clamp-like features)
+
+<question>
+What is a metal clamp with a screw mechanism used for?
+</question>
+
+Use the full context of the conversation, user input, and any image or link to generate the final rephrased question. The output must always be a valid XML block according to the instructions.
+
 Rephrased question:
 `;
 

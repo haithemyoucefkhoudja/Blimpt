@@ -1,21 +1,21 @@
-import AppContainer from "@/components/shortcut-ui/container";
 import "./App.css";
 import MessangerContainer from "@/components/shortcut-ui/messanger-container";
 import { ConfigProvider } from "@/providers/config-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import ChatProvider from "@/providers/chat-provider";
 import { QueryProvider } from "@/providers/query-provider";
+import { AppResizeProvider } from "@/components/shortcut-ui/hooks/use-app-resize";
 
 export default function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <QueryProvider>
         <ConfigProvider>
-          <AppContainer>
+          <AppResizeProvider>
             <ChatProvider>
               <MessangerContainer />
             </ChatProvider>
-          </AppContainer>
+          </AppResizeProvider>
         </ConfigProvider>
       </QueryProvider>
     </ThemeProvider>

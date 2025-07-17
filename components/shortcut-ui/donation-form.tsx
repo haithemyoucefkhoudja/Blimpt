@@ -84,7 +84,7 @@ export default function DonationForm() {
               }}
               allow="payment"
               title="Donation Form"
-              {...({ allowPaymentRequest: "allowpaymentrequest" } as any)}
+              {...({ allowpaymentrequest: "allowpaymentrequest" } as any)}
             />
           </div>
 

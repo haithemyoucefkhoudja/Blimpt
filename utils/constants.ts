@@ -42,6 +42,7 @@ const defaultConfig: Config = {
   selectedModel: defaultModels[0],
   selectedDeepThinkingModel: defaultModels[1],
   OUTPUT_DELAY: 10,
+  LAYOUT_MODE: "vertical",
 };
 export {
   CLOSE_DELAY,

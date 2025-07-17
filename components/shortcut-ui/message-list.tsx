@@ -614,24 +614,6 @@ function MessageList() {
     );
   };
   Item.displayName = "Item";
-  // const handlePrepend = () => {
-  //   virtuosoRef.current?.data.prepend([
-  //     {
-  //       id: String(counter++),
-  //       role: "user",
-  //       content: `--- Prepend ${counter++} ---`,
-  //     },
-  //   ]);
-  // };
-
-  // const handleAppend = () => {
-  //   virtuosoRef.current?.data.append([`--- Append ${counter++} ---`]);
-  // };
-
-  // const handleScrollTo500 = () => {
-  //   virtuosoRef.current?.scrollToIndex(500, { align: "center" });
-  // };
-
   return (
     <section className="w-full h-[400px]">
       {" "}

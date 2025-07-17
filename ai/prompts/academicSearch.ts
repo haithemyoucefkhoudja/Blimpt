@@ -1,21 +1,106 @@
 export const academicSearchRetrieverPrompt = `
-You will be given a conversation below and a follow up question. You need to rephrase the follow-up question if needed so it is a standalone question that can be used by the LLM to search the web for information.
-If it is a writing task or a simple hi, hello rather than a question, you need to return \`not_needed\` as the response.
+You will be given a conversation and a follow-up question. You need to rephrase the follow-up question so that it becomes a standalone query that can be used by a language model to search the web for information.
 
-Example:
-1. Follow up question: How does stable diffusion work?
-Rephrased: Stable diffusion working
+If the follow-up is a writing task or a simple greeting (e.g., "Hi", "Hello", "How are you?"), return:
 
-2. Follow up question: What is linear algebra?
-Rephrased: Linear algebra
+<question>
+not_needed
+</question>
+If the follow-up references a link (webpage or PDF) and asks about something inside it, return:
 
-3. Follow up question: What is the third law of thermodynamics?
-Rephrased: Third law of thermodynamics
+<question>
+[rephrased standalone question]
+</question>
+<links>
+[URL]
+</links>
+If the follow-up asks to summarize content from a URL, return:
 
-Conversation:
-{chat_history}
+<question>
+summarize
+</question>
+<links>
+[URL]
+</links>
+If the follow-up includes an image:
 
-Follow up question: {query}
+If you recognize the content of the image, use that understanding and the user’s input to form a direct, standalone question without mentioning the image. For example, if the image shows a flamingo and the user asks “What bird is this?”, you should rephrase it as:
+
+<question>
+What kind of bird is a flamingo?
+</question>
+If you do not recognize the content of the image, describe what the image seems to show in plain language, and form a search-ready question using that description. For example:
+
+<question>
+What is a handheld metal tool with a clamping mechanism and a screw handle used for?
+</question>
+Do not include a <links> block unless the follow-up contains an actual URL. Always include the rephrased query inside a <question> block.
+
+Examples:
+
+Follow-up question: How does stable diffusion work?
+Rephrased:
+
+<question>
+Stable diffusion working
+</question>
+Follow-up question: What is linear algebra?
+Rephrased:
+
+<question>
+Linear algebra
+</question>
+Follow-up question: What is the third law of thermodynamics?
+Rephrased:
+
+
+<question>
+Third law of thermodynamics
+</question>
+Follow-up question: Hi there
+Rephrased:
+
+
+<question>
+not_needed
+</question>
+Follow-up question: Can you explain the idea from https://example.com
+Rephrased:
+
+<question>
+Can you explain the idea?
+</question>
+<links>
+https://example.com
+</links>
+Follow-up question: Summarize this article: https://example.com
+Rephrased:
+
+<question>
+summarize
+</question>
+<links>
+https://example.com
+</links>
+Follow-up question: <<ImageDisplayed>> What kind of bird is this? (image is a flamingo)
+Rephrased:
+<question>
+What kind of bird is a flamingo?
+</question>
+Follow-up question: <<ImageDisplayed>> What does this symbol mean? (image shows high voltage symbol)
+Rephrased:
+
+<question>
+What does a high voltage warning symbol mean?
+</question>
+Follow-up question: <<ImageDisplayed>> What is this? (AI doesn't recognize image, it's a metallic object with a knob and clamp)
+Rephrased:
+
+<question>
+What is a metallic clamp-like tool with a rotating knob used for?
+</question>
+The user will provide the conversation and the follow-up question.
+
 Rephrased question:
 `;
 

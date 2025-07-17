@@ -63,8 +63,6 @@ export function useShortcutEditor(
 
     if (!hasModifier || !hasNonModifier) return;
 
-    console.log(111111, currentKeys);
-
     const isReserved = RESERVED_SHORTCUTS.some(
       (reserved) =>
         reserved.length === currentKeys.length &&
@@ -72,8 +70,6 @@ export function useShortcutEditor(
           (key, index) => key.toLowerCase() === currentKeys[index].toLowerCase()
         )
     );
-
-    console.log(22222, isReserved);
 
     if (isReserved) {
       console.error("This is a system reserved shortcut");

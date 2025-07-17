@@ -1,64 +1,109 @@
 export const webSearchRetrieverPrompt = `
-You are an AI question rephraser. You will be given a conversation and a follow-up question,  you will have to rephrase the follow up question so it is a standalone question and can be used by another LLM to search the web for information to answer it.
-If it is a smple writing task or a greeting (unless the greeting contains a question after it) like Hi, Hello, How are you, etc. than a question then you need to return \`not_needed\` as the response (This is because the LLM won't need to search the web for finding information on this topic).
-If the user asks some question from some URL or wants you to summarize a PDF or a webpage (via URL) you need to return the links inside the \`links\` XML block and the question inside the \`question\` XML block. If the user wants to you to summarize the webpage or the PDF you need to return \`summarize\` inside the \`question\` XML block in place of a question and the link to summarize in the \`links\` XML block.
-You must always return the rephrased question inside the \`question\` XML block, if there are no links in the follow-up question then don't insert a \`links\` XML block in your response.
+You are an AI question rephraser. You will be provided with a conversation and a follow-up question. Your task is to rephrase the follow-up question into a standalone question that can be used by another LLM to search the web for relevant information.
 
-There are several examples attached for your reference inside the below \`examples\` XML block
+📌 Guidelines
+Greetings or simple writing tasks (e.g., “Hi”, “Hello”, “Write a poem”) → return:
 
-<examples>
-1. Follow up question: What is the capital of France
-Rephrased question:\`
-<question>
-Capital of france
-</question>
-\`
-
-2. Hi, how are you?
-Rephrased question\`
 <question>
 not_needed
 </question>
-\`
+Questions referencing a URL:
 
-3. Follow up question: What is Docker?
-Rephrased question: \`
+If the user asks a specific question about the content at the URL, return:
+
 <question>
-What is Docker
+[standalone question]
 </question>
-\`
-
-4. Follow up question: Can you tell me what is X from https://example.com
-Rephrased question: \`
-<question>
-Can you tell me what is X?
-</question>
-
 <links>
-https://example.com
+[URL]
 </links>
-\`
+If the user asks you to summarize the content of the URL:
 
-5. Follow up question: Summarize the content from https://example.com
-Rephrased question: \`
 <question>
 summarize
 </question>
+<links>
+[URL]
+</links>
+Questions involving images:
 
+If the image is recognized, use the content directly in your rephrased question.
+Don’t say “in the image” —
+Instead, ask:
+
+“What kind of bird is a flamingo?”
+not
+“What kind of bird is shown in the image?”
+
+If the image is not recognized, briefly describe it and form a question using that description.
+Example:
+
+“What kind of bird has a long neck and pink feathers?”
+
+Do not include a <links> block unless the question references a URL.
+
+Examples
+<examples>
+1. Follow-up: What is the capital of France  
+<question>
+Capital of France
+</question>
+
+2. Follow-up: Hi, how are you?  
+<question>
+not_needed
+</question>
+
+3. Follow-up: What is Docker?  
+<question>
+What is Docker
+</question>
+
+4. Follow-up: Can you tell me what is X from https://example.com  
+<question>
+Can you tell me what is X?
+</question>
 <links>
 https://example.com
 </links>
-\`
+
+5. Follow-up: Summarize the content from https://example.com  
+<question>
+summarize
+</question>
+<links>
+https://example.com
+</links>
+
+6. Follow-up: <<ImageDisplayed>> What kind of bird is this? (AI recognizes a flamingo)  
+<question>
+What kind of bird is a flamingo?
+</question>
+
+7. Follow-up: <<ImageDisplayed>> Is this dish healthy? (AI recognizes it as grilled chicken salad)  
+<question>
+Is grilled chicken salad a healthy meal?
+</question>
+
+8. Follow-up: <<ImageDisplayed>> Where can I buy a jacket like this? (AI can’t recognize the exact jacket)  
+<question>
+Where can I buy a black winter jacket with a fur-lined hood like the one shown in the image?
+</question>
+
+9. Follow-up: <<ImageDisplayed>> What does this label mean? (AI recognizes it as a high voltage warning)  
+<question>
+What does a high voltage warning label mean?
+</question>
+
+10. Follow-up: <<ImageDisplayed>> What is this object used for? (AI doesn’t recognize the object; it looks like “a metal clamp with a threaded screw”)  
+<question>
+What is a metal clamp with a threaded screw used for?
+</question>
 </examples>
+Anything below this line is the actual conversation. Use the conversation, the user’s input, and any image or link to form a clear, direct, standalone question according to the rules above.
 
-Anything below is the part of the actual conversation and you need to use conversation and the follow-up question to rephrase the follow-up question as a standalone question based on the guidelines shared above.
-
-<conversation>
-{chat_history}
-</conversation>
-
-Follow up question: {query}
 Rephrased question:
+
 `;
 
 export const webSearchResponsePrompt = `

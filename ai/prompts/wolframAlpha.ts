@@ -1,21 +1,104 @@
 export const wolframAlphaSearchRetrieverPrompt = `
-You will be given a conversation below and a follow up question. You need to rephrase the follow-up question if needed so it is a standalone question that can be used by the LLM to search the web for information.
-If it is a writing task or a simple hi, hello rather than a question, you need to return \`not_needed\` as the response.
+You will be given a conversation below and a follow-up question. You need to rephrase the follow-up question if needed so it is a standalone question that can be used by the LLM to search the web for information.
+
+If it is a writing task or a simple greeting such as "hi", "hello", or "how are you", and does not include an actual question, you must return:
+
+<question> not_needed </question>
+If the follow-up question includes a URL and asks about its content, return:
+
+<question> [rephrased standalone question] </question> <links> [URL] </links>
+If the user asks to summarize content from a URL (webpage or PDF), return:
+
+<question> summarize </question> <links> [URL] </links>
+If the follow-up includes an image:
+
+If you can recognize what is in the image, combine the content of the image with the user’s message to form a direct question. Do not mention "image" in the rephrased question. For example, if the image shows a flamingo and the user asks "What bird is this?", rephrase as:
+
+<question>
+What kind of bird is a flamingo?
+</question>
+
+If you do not recognize what the image contains, briefly describe the image and use that description to construct a question that could be searched. For example:
+
+<question>
+What is a metallic tool with a clamp and a turning knob used for?
+</question>
+
+Do not include a <links> block unless the original message contains an actual URL. Always return the rephrased question inside a <question> block.
 
 Example:
-1. Follow up question: What is the atomic radius of S?
-Rephrased: Atomic radius of S
 
-2. Follow up question: What is linear algebra?
-Rephrased: Linear algebra
+Follow up question: What is the atomic radius of S?
+Rephrased:
 
-3. Follow up question: What is the third law of thermodynamics?
-Rephrased: Third law of thermodynamics
+<question>
+Atomic radius of S
+</question>
 
-Conversation:
-{chat_history}
+Follow up question: What is linear algebra?
+Rephrased:
 
-Follow up question: {query}
+<question>
+Linear algebra
+</question>
+
+Follow up question: What is the third law of thermodynamics?
+Rephrased:
+
+<question>
+Third law of thermodynamics
+</question>
+
+Follow up question: Hi
+Rephrased:
+
+<question>
+not_needed
+</question>
+
+Follow up question: What is shown in https://example.com/page
+Rephrased:
+
+<question>
+What is shown on the page?
+</question>
+<links>
+https://example.com/page
+</links>
+
+Follow up question: Summarize this article: https://example.com/article
+Rephrased:
+
+<question>
+summarize
+</question>
+<links>
+https://example.com/article
+</links>
+
+Follow up question: <<ImageDisplayed>> What kind of bird is this? (image shows a flamingo)
+Rephrased:
+
+<question>
+What kind of bird is a flamingo?
+</question>
+
+Follow up question: <<ImageDisplayed>> What does this symbol mean? (image shows high voltage warning)
+Rephrased:
+
+<question>
+What does a high voltage warning symbol mean?
+</question>
+
+Follow up question: <<ImageDisplayed>> What is this? (image is a metal clamp with a rotating screw)
+Rephrased:
+
+<question>
+What is a metal clamp with a rotating screw used for?
+</question>
+
+The user will provide the conversation and the follow-up question.
+
 Rephrased question:
 `;
 

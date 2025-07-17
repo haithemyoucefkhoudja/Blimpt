@@ -21,7 +21,10 @@ import NewChatIndicator from "./new-chat-indicator";
 import { cn } from "@/lib/utils";
 import { ErrorMessage } from "./error-message";
 import DonationForm from "./donation-form";
-// Define your window types for better type safety
+import { useConfig } from "@/providers/config-provider";
+import { Button } from "../ui/button";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+
 type WindowKey =
   | "chat"
   | "commands"
@@ -31,7 +34,8 @@ type WindowKey =
   | "donation";
 const TitleComponent = ({ title }: { title: string }) => {
   const [showMore, setShowMore] = useState(false);
-
+  const { config } = useConfig();
+  const { LAYOUT_MODE } = config;
   const truncateText = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + "...";
@@ -46,6 +50,7 @@ const TitleComponent = ({ title }: { title: string }) => {
         onMouseEnter={() => setShowMore(true)}
         onMouseLeave={() => setShowMore(false)}
         className="h-fit w-full text-md font-bold text-primary truncate break-words my-2 mx-4 max-w-full"
+        data-tauri-drag-region
       >
         {title}
       </h3>
@@ -58,15 +63,64 @@ const TitleComponent = ({ title }: { title: string }) => {
     </div>
   );
 };
+const MainWrapper = memo(function MainWrapper({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { mainRef, ActiveWindow } = useAppResize();
+  const { config } = useConfig();
+  const { lastMessage } = useChat();
+  const lastMessageVisible = !!lastMessage && !lastMessage.hidden;
+  const { LAYOUT_MODE } = config;
 
+  return (
+    <div
+      ref={mainRef}
+      className={cn(
+        "",
+        LAYOUT_MODE === "vertical" ? "" : "min-h-64 max-h-full w-full"
+      )}
+      data-tauri-drag-region
+    >
+      <div
+        className={cn(
+          "w-full h-full",
+          LAYOUT_MODE === "vertical" ? "" : "flex flex-col"
+        )}
+        data-tauri-drag-region
+      >
+        <div
+          className={cn(
+            "flex bg-background relative w-full p-4 rounded-xl border-2 border-foreground/20",
+
+            ActiveWindow === "chat" ? "flex-1 " : ""
+          )}
+          // style={widthFunc(ActiveWindow, LAYOUT_MODE, !!lastMessage)}
+          data-tauri-drag-region
+        >
+          {children}
+        </div>
+        {ActiveWindow === "chat" && lastMessageVisible && (
+          <div
+            className={cn("h-full", LAYOUT_MODE === "vertical" ? "w-full" : "")}
+            data-tauri-drag-region
+          ></div>
+        )}
+      </div>
+    </div>
+  );
+});
 const MainComponent = memo(function MainComponent() {
-  const { ActiveWindow, setActiveWindow } = useAppResize();
-  const { setLastMessage, setError, conversation, isLoading, error } =
+  const { ActiveWindow, setActiveWindow, mainRef } = useAppResize();
+  const { config } = useConfig();
+  const { LAYOUT_MODE } = config;
+  const { setError, conversation, isLoading, error, closeLastMessage } =
     useChat(); // Destructure all props needed by child components here
-  const [showMore, setShowMore] = useState(false);
   const closeWindowOnChatInactive = () => {
-    setLastMessage(null);
+    // toggleLastMessage();
     setError(null);
+    closeLastMessage();
   };
 
   useEffect(() => {
@@ -111,10 +165,7 @@ const MainComponent = memo(function MainComponent() {
   }, [isLoading, conversation]);
 
   return (
-    <div
-      className="flex bg-background relative w-full p-4 rounded-xl border-2 border-foreground/20"
-      data-tauri-drag-region
-    >
+    <MainWrapper>
       {/* Left Sidebar */}
       <div
         className="flex flex-col items-center gap-2 h-full justify-end mt-auto shrink-0"
@@ -139,7 +190,12 @@ const MainComponent = memo(function MainComponent() {
         <div className="flex-1 relative h-full">
           {" "}
           {/* Ensures this container takes up remaining space and is a positioning context */}
-          <div className={cn("w-full  h-full")}>
+          <div
+            className={cn(
+              "w-full ",
+              LAYOUT_MODE === "vertical" ? "h-full" : ""
+            )}
+          >
             {windowDefinitions.find((w) => w.key === ActiveWindow)?.Component()}
           </div>
         </div>
@@ -164,10 +220,52 @@ const MainComponent = memo(function MainComponent() {
             activeWindow={ActiveWindow}
             setActiveWindow={() => setActiveWindow("donation")}
           />
+
+          <HiddenIndicator />
         </div>
       </div>
-    </div>
+    </MainWrapper>
   );
 });
-
+const HiddenIndicator = () => {
+  const { toggleLastMessage, lastMessage } = useChat();
+  const hidden = lastMessage?.hidden;
+  const [isRotating, setIsRotating] = useState(false);
+  useEffect(() => {
+    if (isRotating) {
+      const timer = setTimeout(() => setIsRotating(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isRotating]);
+  const handleClick = () => {
+    setIsRotating(true);
+    toggleLastMessage();
+  };
+  const getIcon = () => {
+    if (hidden) {
+      return <ArrowRight className="h-[1.2rem] w-[1.2rem]" />;
+    } else {
+      return <ArrowLeft className="h-[1.2rem] w-[1.2rem]" />;
+    }
+  };
+  return (
+    <Button
+      onClick={handleClick}
+      variant="outline"
+      size="icon"
+      className={`rounded-full transition-transform duration-300 ease-in-out ${
+        isRotating ? "rotate-180" : ""
+      }`}
+    >
+      <div
+        className={`transition-opacity duration-300 ease-in-out ${
+          isRotating ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        {getIcon()}
+      </div>
+    </Button>
+  );
+};
+MainComponent.displayName = "MainComponent";
 export default MainComponent;

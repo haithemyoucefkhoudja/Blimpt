@@ -11,11 +11,12 @@ import {
 import { load } from "@tauri-apps/plugin-store";
 import { Config } from "@/types/settings/config";
 import { Provider } from "@/types/settings/provider";
-import { defaultConfig } from "@/utils/constants";
+import { CLOSE_DELAY, defaultConfig } from "@/utils/constants";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import {
   cursorPosition,
   getAllWindows,
+  getCurrentWindow,
   PhysicalPosition,
 } from "@tauri-apps/api/window";
 
@@ -211,7 +212,7 @@ export const ConfigProvider = ({ children }: { children: ReactNode }) => {
     const loadConfig = async () => {
       const store = await load("config.json", { autoSave: false });
       let storedConfig = await store.get<Config>("config");
-      console.log("storedConfig:", storedConfig);
+
       // The logic for checking and back-filling defaults is great, keep it.
       // We'll just make sure to save if we modify it.
       let needsSave = false;
@@ -248,6 +249,10 @@ export const ConfigProvider = ({ children }: { children: ReactNode }) => {
         storedConfig.OUTPUT_DELAY = defaultConfig.OUTPUT_DELAY;
         needsSave = true;
       }
+      if (!storedConfig.LAYOUT_MODE) {
+        storedConfig.LAYOUT_MODE = defaultConfig.LAYOUT_MODE;
+        needsSave = true;
+      }
       if (needsSave) {
         await store.set("config", storedConfig);
         await store.save();
@@ -280,7 +285,22 @@ export const ConfigProvider = ({ children }: { children: ReactNode }) => {
   const setIsSearch = () => dispatch({ type: "TOGGLE_SEARCH" });
   const setPort = (port: string | null) =>
     dispatch({ type: "SET_PORT", payload: port });
+  const hasExecutedTimeout = useRef(false);
+  useEffect(() => {
+    if (hasExecutedTimeout.current) return;
 
+    const physicalWindow = getCurrentWindow();
+    const timer = setTimeout(async () => {
+      if (hasExecutedTimeout.current || !firstRenderRef.current) return;
+      await physicalWindow.hide();
+      setIsFirstRender(false);
+      hasExecutedTimeout.current = true;
+    }, CLOSE_DELAY);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [firstRenderRef, setIsFirstRender]);
   // Memoize the context value to prevent unnecessary re-renders of consumers
   const contextValue = useMemo(
     () => ({

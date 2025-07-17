@@ -13,6 +13,9 @@ export type Message = {
   isLoading?: boolean;
   action?: string;
 };
+export type HiddenMessage = Message & {
+  hidden: boolean;
+};
 export type StoreMessageResponse = {
   message_id: number;
   conversation_id: number;

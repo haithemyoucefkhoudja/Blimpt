@@ -17,4 +17,5 @@ export type Config = {
   APP_SHORTCUT: string;
   SCREENSHOT_SHORTCUT: string;
   OUTPUT_DELAY: number;
+  LAYOUT_MODE: "vertical" | "horizontal";
 };

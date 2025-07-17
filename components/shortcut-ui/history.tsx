@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
 import type { Conversation } from "@/types/Conversation";
 import { useChat } from "@/providers/chat-provider";
-import { useAppResize, useSizeChange } from "./hooks/use-app-resize";
-import { useInfiniteConversations } from "@/hooks/use-infinite-query";
 import { InfiniteScroll } from "@/components/ui/infinite-scroll";
 import { useGetMessages } from "@/hooks/use-messages-query";
 import { ListScrollArea } from "../ui/list-scroll-area";
+import { useConversations } from "@/providers/chat-provider";
 
 export function ConversationList() {
   const {
@@ -30,15 +29,14 @@ export function ConversationList() {
     isError: isErrorMessage,
     error: errorMeessage,
   } = useGetMessages(conversationId);
-
   const {
-    data,
+    conversations,
     fetchNextPage,
     hasNextPage,
     isLoading,
     isError,
     error: ErrorConversation,
-  } = useInfiniteConversations();
+  } = useConversations();
 
   // Update messages in chat context ONLY when messagesdata changes AND is defined
   useEffect(() => {
@@ -57,11 +55,12 @@ export function ConversationList() {
   }, [messagesdata, conversationId, setMessages]); // <-- CORRECTED DEPENDENCIES
 
   // Update the selected conversation in the context
-  useEffect(() => {
-    if (conversation) {
-      setConversation(conversation);
-    }
-  }, [conversation, setConversation]);
+  // useEffect(() => {
+  //   if (conversation) {
+  //     console.log("Conversation selected:", conversation);
+  //     setConversation(conversation);
+  //   }
+  // }, [conversation, setConversation]);
 
   // Handle errors from the query
   useEffect(() => {
@@ -74,10 +73,7 @@ export function ConversationList() {
     }
   }, [errorMeessage, ErrorConversation, setError]);
 
-  // Flatten the pages of conversations
-  const conversations = data?.pages.flat() || [];
-
-  useSizeChange(() => {}, [conversations]);
+  // useSizeChange(() => {}, [conversations]);
 
   // Group conversations by date
   const groupedConversations = conversations.reduce((groups, conversation) => {

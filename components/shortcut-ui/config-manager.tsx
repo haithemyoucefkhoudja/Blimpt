@@ -41,6 +41,73 @@ const OutPutDelay = () => {
     </div>
   );
 };
+const LayoutMode = () => {
+  const { config, updateConfig } = useConfig();
+  const [value, setValue] = React.useState<string>(config.LAYOUT_MODE);
+
+  const handleValueChange = (newValue: string) => {
+    setValue(newValue);
+    updateConfig("LAYOUT_MODE", newValue);
+  };
+
+  const isHorizontal = value === "horizontal";
+
+  return (
+    <div className="space-y-6 mb-4 p-6 max-w-md mx-auto">
+      <Label className="text-lg font-semibold">Layout Mode</Label>
+
+      {/* Visual Preview */}
+      <div className="bg-background rounded-lg p-6 flex items-center justify-center min-h-[200px]">
+        <div
+          className={`flex gap-3 transition-all duration-500 ease-in-out ${
+            isHorizontal ? "flex-row" : "flex-col"
+          }`}
+        >
+          <div className="w-16 h-16 bg-background border border-border rounded-lg shadow-md transition-all duration-500 ease-in-out transform hover:scale-105" />
+          <div className="w-16 h-16 bg-background border border-border rounded-lg shadow-md transition-all duration-500 ease-in-out transform hover:scale-105" />
+        </div>
+      </div>
+
+      {/* Toggle Buttons */}
+      <div className="flex gap-2">
+        <Button
+          variant={isHorizontal ? "default" : "outline"}
+          size="sm"
+          onClick={() => handleValueChange("horizontal")}
+          className="flex-1 transition-all duration-200"
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              <div className="w-2 h-2 bg-current rounded-sm opacity-70" />
+              <div className="w-2 h-2 bg-current rounded-sm opacity-70" />
+            </div>
+            Horizontal
+          </div>
+        </Button>
+
+        <Button
+          variant={!isHorizontal ? "default" : "outline"}
+          size="sm"
+          onClick={() => handleValueChange("vertical")}
+          className="flex-1 transition-all duration-200"
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-1">
+              <div className="w-2 h-2 bg-current rounded-sm opacity-70" />
+              <div className="w-2 h-2 bg-current rounded-sm opacity-70" />
+            </div>
+            Vertical
+          </div>
+        </Button>
+      </div>
+
+      {/* Current Selection Display */}
+      <div className="text-sm text-gray-600 text-center transition-all duration-300">
+        Current mode: <span className="font-medium capitalize">{value}</span>
+      </div>
+    </div>
+  );
+};
 const ConfigManager: React.FC = () => {
   const { config, saveConfig, updateConfig, isUpdated } = useConfig();
   const [saveMessage, setSaveMessage] = useState("");
@@ -160,6 +227,7 @@ const ConfigManager: React.FC = () => {
               }}
             />
             <OutPutDelay />
+            <LayoutMode />
             <div className="space-y-6">
               <ShortcutItem
                 label="Main Window Shortcut"
